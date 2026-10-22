@@ -103,5 +103,6 @@
   "status.done": "Hoàn tất",
   "status.stopped": "Đã dừng",
   "status.error": "Lỗi",
-  "tpl.needCaption": "Cần ít nhất 1 caption có chữ: bấm “+ Thêm caption”, nhập giây bắt đầu, giây kết thúc và câu gốc trên video."
+  "tpl.needCaption": "Cần ít nhất 1 caption có chữ: bấm “+ Thêm caption”, nhập giây bắt đầu, giây kết thúc và câu gốc trên video.",
+  "res.log": "Xem nhật ký (gửi cho kỹ thuật khi tool lỗi hoặc bị kẹt)"
 }

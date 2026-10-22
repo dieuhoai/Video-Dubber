@@ -1,6 +1,7 @@
 """Chạy batch trong thread nền, đẩy tiến độ qua WebSocket. Một batch tại một thời điểm (máy chủ render tuần tự)."""
 from __future__ import annotations
 
+import logging
 import threading
 
 from fastapi import APIRouter, HTTPException
@@ -25,10 +26,12 @@ def _worker(req: BatchRequest, batch: tuple[str, object]) -> None:
         STATE.update_job(done=done, total=total, items=list(items))
 
     try:
-        res = run_batch(req, on_progress=progress, should_stop=STATE.stop_flag.is_set, batch=batch)
+        res = run_batch(req, on_progress=progress, should_stop=STATE.stop_flag.is_set, batch=batch,
+                        on_stage=lambda text: STATE.update_job(stage=text))
         status = "stopped" if STATE.stop_flag.is_set() else "done"
         STATE.update_job(status=status, ok=res.ok_count, failed=[f.model_dump(mode="json") for f in res.failed])
     except Exception as e:  # noqa: BLE001 — báo lỗi lên UI thay vì chết im lặng
+        logging.getLogger("videodubber").exception("Batch lỗi")
         STATE.update_job(status="error", error=str(e))
     finally:
         _lock.release()
@@ -53,7 +56,7 @@ def start(body: dict) -> dict:
     batch = store.new_batch(tpl)
     STATE.stop_flag.clear()
     STATE.update_job(status="running", batch_id=batch[0], template_id=tpl.id, done=0, total=len(req.variants),
-                     items=[], ok=0, failed=[], error=None)
+                     items=[], ok=0, failed=[], error=None, stage="Bắt đầu…")
     threading.Thread(target=_worker, args=(req, batch), daemon=True).start()
     return {"started": True, "batch_id": batch[0]}
 

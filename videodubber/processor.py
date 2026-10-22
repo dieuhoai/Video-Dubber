@@ -5,6 +5,7 @@ báo tiến độ qua `on_progress(done, total, item)`; huỷ qua `should_stop()
 """
 from __future__ import annotations
 
+import logging
 import re
 import shutil
 import tempfile
@@ -23,6 +24,15 @@ from .render import render
 from .tts import TTS, default_tts
 
 Progress = Callable[[int, int, ItemResult], None]
+Stage = Callable[[str], None]
+log = logging.getLogger("videodubber")
+
+
+def _stage(cb: Stage | None, text: str) -> None:
+    """Báo bước đang làm lên giao diện + ghi nhật ký (để biết tool đang chạy hay bị kẹt ở đâu)."""
+    log.info(text)
+    if cb:
+        cb(text)
 
 
 def output_name(tpl: Template, v: LangVariant, version: int, ratio: str = "9x16") -> str:
@@ -57,7 +67,7 @@ def prepare_music(tpl: Template, tdir: Path) -> Path | None:
 
 
 def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: Path | None, tts: TTS,
-                   work: Path) -> ItemResult:
+                   work: Path, on_stage: Stage | None = None) -> ItemResult:
     lang = get_lang(v.lang)
     work.mkdir(parents=True, exist_ok=True)
     ass_text, layouts = build_ass(tpl.captions, v.captions, tpl.style, tpl.width, tpl.height, lang.spaces)
@@ -70,16 +80,20 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
         sl = slots([x.start for x in tpl.voice], [x.end for x in tpl.voice], tpl.duration)
         clips = []
         for i, (line, text) in enumerate(zip(tpl.voice, v.voice, strict=True)):
+            _stage(on_stage, f"{v.lang} {v.hook}: tạo giọng câu {i + 1}/{len(tpl.voice)}")
             raw = tts.synth(text.strip(), lang, v.gender, work / f"tts_{i}.wav")
             f = fit_clip(raw, work / f"fit_{i}.wav", i, sl[i])
             fits.append(f)
             clips.append((work / f"fit_{i}.wav", line.start))
+        _stage(on_stage, f"{v.lang} {v.hook}: trộn giọng + nhạc")
         audio = mix(clips, music, tpl.duration, work / "mix.wav")
     elif tpl.audio_mode == "music_file" or tpl.audio_mode == "separate":
         audio = mix([], music, tpl.duration, work / "mix.wav")
 
+    _stage(on_stage, f"{v.lang} {v.hook}: xuất video")
     render(tdir / tpl.video, ass, out, tpl.duration, tpl.cover, tpl.captions, audio,
            keep_original_audio=tpl.audio_mode == "original", workdir=work, size=(tpl.width, tpl.height))
+    _stage(on_stage, f"{v.lang} {v.hook}: kiểm tra")
     checks = [
         check_duration(out, tpl),
         check_layout(layouts),
@@ -92,7 +106,8 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
 
 
 def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_stop: Callable[[], bool] | None = None,
-              tts: TTS | None = None, batch: tuple[str, Path] | None = None) -> JobResult:
+              tts: TTS | None = None, batch: tuple[str, Path] | None = None,
+              on_stage: Stage | None = None) -> JobResult:
     tpl = store.load_template(req.template_id)
     tdir = store.template_dir(tpl.id)
     for v in req.variants:  # báo lỗi nhập liệu trước khi tốn thời gian render
@@ -101,7 +116,11 @@ def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_sto
     if len(set(names)) != len(names):
         raise ValueError("Có 2 biến thể trùng ngôn ngữ + giọng + mã hook — đổi mã hook (h1, h2…) cho khác nhau.")
     bid, bdir = batch or store.new_batch(tpl)
+    if tpl.audio_mode == "separate" and not (tdir / "stems" / "music.wav").is_file():
+        _stage(on_stage, "Tách nhạc nền khỏi giọng gốc (chỉ lần đầu, 15–90 giây)")
     music = prepare_music(tpl, tdir)
+    if tpl.uses_voice:
+        _stage(on_stage, "Nạp giọng đọc AI (vài giây đến nửa phút)")
     tts = tts or default_tts()
     results: list[ItemResult] = []
     with tempfile.TemporaryDirectory(prefix="vdub_") as tmp:
@@ -109,8 +128,9 @@ def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_sto
             if should_stop and should_stop():
                 break
             try:
-                r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}")
+                r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}", on_stage)
             except Exception as e:  # noqa: BLE001 — lỗi 1 video không được làm hỏng cả batch
+                log.exception("Lỗi khi tạo %s %s", v.lang, v.hook)
                 r = ItemResult(lang=f"{v.lang} {v.hook}", ok=False, error=str(e))
             finally:
                 shutil.rmtree(Path(tmp) / f"{i}", ignore_errors=True)

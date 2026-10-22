@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Sửa
+- Màn hình Kết quả ghi rõ tool đang làm bước nào (tách nhạc, tạo giọng câu 2/4, xuất video…); có link "Xem nhật ký" để gửi khi bị lỗi/kẹt (bản Mac chạy ngầm, không có cửa sổ đen).
 - Video mới tải lên có sẵn 1 dòng caption để điền; nút Tiếp tục bị khoá thì có dòng giải thích cần làm gì.
 - Caption mới ngắn hơn caption gốc không còn lộ chữ cũ ở 2 bên: vùng chữ cũ được xoá sạch (tô lại từ nền xung quanh) thay vì chỉ làm mờ.
 ### Thêm

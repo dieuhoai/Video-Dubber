@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 
 from videodubber import store
 from videodubber.audio import SEPARATION_MODEL
@@ -16,6 +17,16 @@ router = APIRouter(prefix="/api")
 @router.get("/langs")
 def langs() -> dict:
     return {"items": [lang.to_dict() for lang in LANGS.values()]}
+
+
+@router.get("/log", response_class=PlainTextResponse)
+def log_tail(lines: int = 200) -> str:
+    """200 dòng nhật ký cuối — để người dùng gửi khi tool báo lỗi hoặc bị kẹt."""
+    from videodubber import defaults as D
+    f = D.USER_DIR / "videodubber.log"
+    if not f.is_file():
+        return "Chưa có nhật ký."
+    return "\n".join(f.read_text(encoding="utf-8", errors="replace").splitlines()[-max(1, min(lines, 2000)):])
 
 
 @router.get("/capabilities")

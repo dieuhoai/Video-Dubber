@@ -101,6 +101,22 @@ def create_app(token: str, allowed_hosts: Iterable[str]) -> FastAPI:
     return app
 
 
+def _setup_log() -> None:
+    """Ghi nhật ký ra file (bản .app trên Mac chạy ngầm, không có cửa sổ để xem lỗi)."""
+    import logging
+    from logging.handlers import RotatingFileHandler
+
+    from videodubber import defaults as D
+    D.USER_DIR.mkdir(parents=True, exist_ok=True)
+    h = RotatingFileHandler(D.USER_DIR / "videodubber.log", maxBytes=2_000_000, backupCount=2, encoding="utf-8")
+    h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    lg = logging.getLogger("videodubber")
+    lg.setLevel(logging.INFO)
+    lg.addHandler(h)
+    lg.addHandler(logging.StreamHandler())
+    lg.info("Khởi động %s", APP_NAME)
+
+
 def free_port(preferred: int = 8765) -> int:
     for p in [preferred, *range(preferred + 1, preferred + 50), 0]:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -132,6 +148,7 @@ def main(argv: list[str] | None = None) -> None:
         except Exception:  # noqa: BLE001
             pass
     import uvicorn
+    _setup_log()
     shared = a.host != "127.0.0.1"
     port = a.port if shared else free_port(a.port)
     token = a.token or secrets.token_urlsafe(24)

@@ -49,8 +49,9 @@ def test_batch_renders_each_hook_and_language(video):
         LangVariant(lang="ja", captions=["試しましたか？"], voice=["こんにちは", "はい"], hook="h1", gender="m"),
         LangVariant(lang="de", captions=["Text"], voice=["x" * 80, "ja"], hook="h1"),  # câu 1 quá dài
     ])
-    seen = []
-    res = run_batch(req, on_progress=lambda d, t, it: seen.append((d, t)), tts=BeepTTS())
+    seen, stages = [], []
+    res = run_batch(req, on_progress=lambda d, t, it: seen.append((d, t)), tts=BeepTTS(), on_stage=stages.append)
+    assert any("tạo giọng câu 1/2" in s for s in stages) and any("xuất video" in s for s in stages)
     assert seen[-1] == (4, 4) and res.ok_count == 4, [i.error for i in res.items]
     names = sorted(i.output.name for i in res.items)
     assert names[0].startswith("app_concept_de_f1_h1") and any("_ja_m1_h1_" in n for n in names)

@@ -14,7 +14,7 @@
 2. **Giải nén** (chuột phải → *Extract All…*) vào chỗ cố định, vd `D:\VideoDubber`. Đừng chạy thẳng trong file zip.
 3. Nhấp đúp **`VideoDubber.exe`** → cửa sổ đen hiện ra, trình duyệt tự mở giao diện. **Đừng đóng cửa sổ đen** khi đang dùng.
    - Windows báo *"Windows protected your PC"*: bấm **More info → Run anyway** (tool chưa mua chữ ký số, không phải virus).
-   - Mac: chuột phải `VideoDubber.app` → **Open** → **Open** (chỉ lần đầu).
+   - Mac: lần đầu macOS chặn → **Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở**. Bản Mac chạy ngầm, không có cửa sổ đen; muốn tắt: chuột phải biểu tượng trên Dock → Thoát.
 4. App đã có sẵn giọng đọc offline + tách nhạc, chạy không cần Internet (trừ các ngôn ngữ dùng giọng Microsoft).
 
 ## Cách dùng (4 bước trên giao diện web)

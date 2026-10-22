@@ -103,5 +103,6 @@
   "status.done": "Done",
   "status.stopped": "Stopped",
   "status.error": "Error",
-  "tpl.needCaption": "Add at least one caption with text: click “+ Add caption” and enter start, end and the original on-screen text."
+  "tpl.needCaption": "Add at least one caption with text: click “+ Add caption” and enter start, end and the original on-screen text.",
+  "res.log": "View log (send to support if the tool errors or hangs)"
 }

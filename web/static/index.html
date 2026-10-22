@@ -295,6 +295,8 @@
           <span x-show="job.total" x-text="`— ${job.done}/${job.total}`"></span>
           <span x-show="job.status === 'running'" class="muted" x-text="t('res.wait')"></span>
         </p>
+        <p class="muted small" data-testid="stage" x-show="job.status === 'running' && job.stage" x-text="'→ ' + job.stage"></p>
+        <p class="small"><a class="link" href="/api/log" target="_blank" rel="noopener" x-text="t('res.log')"></a></p>
         <p class="error" role="alert" x-show="job.error" x-text="job.error"></p>
       </div>
 

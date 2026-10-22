@@ -51,6 +51,11 @@ def test_meta(client):
     assert set(client.get("/api/capabilities").json()) == {"offline_voice", "separate", "translate_api"}
 
 
+def test_log_endpoint(client):
+    r = client.get("/api/log")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/plain")
+
+
 def test_path_traversal_blocked(client):
     assert client.get("/api/templates/..%2F..%2Fetc").status_code == 404
     assert client.get("/api/batches/abcdef123456/files/..%2Fx.mp4").status_code == 404
