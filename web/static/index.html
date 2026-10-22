@@ -175,10 +175,12 @@
                 <input class="input" :value="tpl.glossary.join(', ')" :placeholder="t('tpl.glossaryPh')"
                        @change="tpl.glossary = $event.target.value.split(',').map(s => s.trim()).filter(Boolean)"></label>
 
+              <p class="warn small" role="status" data-testid="need-caption" x-show="!tpl.captions.some(c => (c.text || '').trim())"
+                 x-text="t('tpl.needCaption')"></p>
               <div class="row actions">
                 <button class="btn" type="button" @click="saveTemplate()" x-text="t('common.save')"></button>
                 <button class="btn btn-primary" type="button" data-testid="next-1" @click="saveTemplate(2)"
-                        :disabled="!tpl.captions.length" x-text="t('common.next')"></button>
+                        :disabled="!tpl.captions.some(c => (c.text || '').trim())" x-text="t('common.next')"></button>
               </div>
             </div>
           </template>

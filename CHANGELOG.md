@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Sửa
+- Video mới tải lên có sẵn 1 dòng caption để điền; nút Tiếp tục bị khoá thì có dòng giải thích cần làm gì.
 - Caption mới ngắn hơn caption gốc không còn lộ chữ cũ ở 2 bên: vùng chữ cũ được xoá sạch (tô lại từ nền xung quanh) thay vì chỉ làm mờ.
 ### Thêm
 - Tải video gốc, khai báo caption/lời thoại, xem thử caption mới trên khung hình.

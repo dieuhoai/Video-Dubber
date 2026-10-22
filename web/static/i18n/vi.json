@@ -102,5 +102,6 @@
   "status.running": "Đang tạo video",
   "status.done": "Hoàn tất",
   "status.stopped": "Đã dừng",
-  "status.error": "Lỗi"
+  "status.error": "Lỗi",
+  "tpl.needCaption": "Cần ít nhất 1 caption có chữ: bấm “+ Thêm caption”, nhập giây bắt đầu, giây kết thúc và câu gốc trên video."
 }

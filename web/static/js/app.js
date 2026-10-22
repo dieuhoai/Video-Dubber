@@ -104,6 +104,8 @@ function app() {
       try { this.setTemplate(await api(`/api/templates/${id}`)); } catch (e) { this.error = e.message; }
     },
     setTemplate(t) {
+      // Video mới chưa có caption: tạo sẵn 1 dòng (0 → 4 giây) để người dùng chỉ việc gõ chữ gốc.
+      if (!t.captions.length) t.captions.push({ start: 0, end: +Math.min(4, t.duration).toFixed(2), text: "" });
       this.tpl = t;
       this.frameT = Math.min(1, t.duration / 2);
       this.showPreview = false;

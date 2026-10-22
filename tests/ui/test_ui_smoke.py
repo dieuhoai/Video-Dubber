@@ -67,8 +67,10 @@ def test_full_flow(server, video, viewport):
         page.get_by_test_id("tpl-file").set_input_files(str(video))
         page.get_by_test_id("tpl-upload").click()
         pw.expect(page.get_by_test_id("frame")).to_be_visible(timeout=15_000)
-        page.get_by_role("button", name="+").first.click()
-        page.get_by_test_id("caption-text").first.fill("As-tu essayé ?")
+        pw.expect(page.get_by_test_id("next-1")).to_be_disabled()  # chưa có chữ caption → không cho đi tiếp
+        pw.expect(page.get_by_test_id("need-caption")).to_be_visible()
+        page.get_by_test_id("caption-text").first.fill("As-tu essayé ?")  # dòng caption được tạo sẵn
+        pw.expect(page.get_by_test_id("need-caption")).to_be_hidden()
         page.get_by_test_id("next-1").click()
         page.get_by_test_id("lang-es").check()
         page.get_by_test_id("next-2").click()
