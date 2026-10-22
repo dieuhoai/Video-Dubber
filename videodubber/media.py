@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,10 +27,23 @@ def find_tool(name: str) -> str:
     return found
 
 
+def _env() -> dict[str, str]:
+    """ffmpeg tĩnh trên Windows/macOS không biết font hệ thống ở đâu → chỉ cho nó qua FONTCONFIG_FILE."""
+    env = dict(os.environ)
+    if "FONTCONFIG_FILE" not in env and sys.platform in ("win32", "darwin"):
+        name = "fonts-win.conf" if sys.platform == "win32" else "fonts-mac.conf"
+        for cand in (resource_root() / name, resource_root() / "build" / name):
+            if cand.is_file():
+                env["FONTCONFIG_FILE"] = str(cand)
+                break
+    return env
+
+
 def run(args: list[str], timeout: float = 900) -> subprocess.CompletedProcess:
     """Chạy tool ngoài; lỗi → MediaError kèm vài dòng cuối của stderr để dễ tra."""
     try:
-        p = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
+        p = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
+                           env=_env())
     except subprocess.TimeoutExpired as e:
         raise MediaError(f"{Path(args[0]).name} chạy quá {timeout:.0f}s và đã bị dừng") from e
     if p.returncode != 0:

@@ -13,7 +13,8 @@ BUNDLE_ID = "io.github.videodubber"
 datas = [
     (str(ROOT / "web" / "static"), "web/static"),
     (str(ROOT / "fonts"), "fonts"),
-    (str(ROOT / "build" / "fonts.conf"), "."),
+    (str(ROOT / "build" / "fonts-mac.conf"), "."),
+    (str(ROOT / "build" / "fonts-win.conf"), "."),
     *[(str(p), "models") for p in (ROOT / "models").glob("*") if p.is_file() and p.name != ".gitkeep"],
     (str(ROOT / "README.md"), "."),
     (str(ROOT / "LICENSE"), "."),

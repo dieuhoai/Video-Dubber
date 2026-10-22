@@ -8,6 +8,15 @@
    es: 3 câu hook, de: 2 câu hook       →  5 video: bdaycard_hookIA_es_f1_h1_9x16_v1.mp4 …
 ```
 
+## Tải về và mở (không cần cài gì)
+
+1. Vào trang **[Releases](../../releases/latest)**, tải `VideoDubber-windows.zip` (máy Mac chip Apple: `VideoDubber-macos.zip`).
+2. **Giải nén** (chuột phải → *Extract All…*) vào chỗ cố định, vd `D:\VideoDubber`. Đừng chạy thẳng trong file zip.
+3. Nhấp đúp **`VideoDubber.exe`** → cửa sổ đen hiện ra, trình duyệt tự mở giao diện. **Đừng đóng cửa sổ đen** khi đang dùng.
+   - Windows báo *"Windows protected your PC"*: bấm **More info → Run anyway** (tool chưa mua chữ ký số, không phải virus).
+   - Mac: chuột phải `VideoDubber.app` → **Open** → **Open** (chỉ lần đầu).
+4. App đã có sẵn giọng đọc offline + tách nhạc, chạy không cần Internet (trừ các ngôn ngữ dùng giọng Microsoft).
+
 ## Cách dùng (4 bước trên giao diện web)
 
 1. **Video gốc** — tải MP4 lên. Nhập caption gốc (giây bắt đầu/kết thúc + chữ), kiểm tra khung đỏ trùng vùng caption cũ,
