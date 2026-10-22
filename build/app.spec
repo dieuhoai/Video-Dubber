@@ -10,7 +10,8 @@ BUNDLE_ID = "io.github.videodubber"
 
 datas = [
     (str(ROOT / "web" / "static"), "web/static"),
-    (str(ROOT / "presets"), "presets"),
+    (str(ROOT / "fonts"), "fonts"),
+    *[(str(p), "models") for p in (ROOT / "models").glob("*") if p.is_file() and p.name != ".gitkeep"],
     (str(ROOT / "README.md"), "."),
     (str(ROOT / "LICENSE"), "."),
 ]
@@ -18,7 +19,8 @@ binaries = [(str(p), "bin") for p in (ROOT / "bin").glob("*") if p.is_file() and
 
 hidden = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto", "uvicorn.protocols.http.h11_impl",
           "uvicorn.protocols.websockets.auto", "uvicorn.protocols.websockets.websockets_impl",
-          "uvicorn.lifespan.on", "tkinter", "tkinter.filedialog"]
+          "uvicorn.lifespan.on", "multipart", "kokoro_onnx", "onnxruntime",
+          "soundfile", "edge_tts"]
 
 a = Analysis([str(ROOT / "build" / "launcher.py")], pathex=[str(ROOT)], binaries=binaries, datas=datas,
              hiddenimports=hidden, excludes=["pytest", "playwright"], noarchive=False)

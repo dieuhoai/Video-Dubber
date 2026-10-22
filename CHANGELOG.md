@@ -3,6 +3,12 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Thêm
+- Tải video gốc, khai báo caption/lời thoại, xem thử caption mới trên khung hình.
+- Nhân bản hàng loạt: mỗi dòng câu hook × mỗi ngôn ngữ = 1 video; 19 ngôn ngữ, giọng nữ/nam.
+- Tách nhạc nền khỏi giọng gốc (chạy trên máy, không cần GPU); giọng đọc offline Kokoro + Microsoft Edge TTS.
+- Kiểm tra tự động: thời lượng, tốc độ voice, chữ vừa khung, font đủ chữ, âm lượng −14 LUFS, glossary.
+- Chế độ máy chủ nội bộ dùng chung (--host/--allow-host), tải ZIP kết quả.
 
 ### Added
 - Plugin Claude Code `lutech-tools` (cài bằng `install.sh`): lệnh `/lutech-tools:new-tool`, `help` và các skill quy trình; hướng dẫn `docs/PLUGIN.md`.

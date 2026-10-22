@@ -23,53 +23,298 @@
     </div>
   </header>
 
+  <nav class="steps" :aria-label="t('steps.label')">
+    <template x-for="s in [1,2,3,4]" :key="s">
+      <button type="button" class="step" :class="{ active: step === s, done: step > s }" :data-testid="'step-' + s"
+              :aria-current="step === s ? 'step' : null" :disabled="!canGo(s)" @click="go(s)">
+        <span class="step-num" x-text="s"></span><span x-text="t('steps.' + s)"></span>
+      </button>
+    </template>
+  </nav>
+
   <main class="content">
-    <section class="card" aria-labelledby="sec-input">
-      <h2 id="sec-input" x-text="t('job.title')"></h2>
+    <p class="error" role="alert" x-show="error" x-text="error"></p>
+    <p class="notice" role="status" x-show="notice" x-text="notice"></p>
 
-      <label class="field">
-        <span x-text="t('job.input')"></span>
-        <div class="row">
-          <input class="input" data-testid="input-dir" :aria-label="t('job.input')" x-model.trim="form.input_dir" :placeholder="t('job.pathHint')">
-          <button class="btn" type="button" @click="pick('input_dir')" x-text="t('common.browse')"></button>
+    <!-- ========== BƯỚC 1: TEMPLATE ========== -->
+    <section x-show="step === 1">
+      <div class="card" x-show="!tpl">
+        <h2 x-text="t('tpl.uploadTitle')"></h2>
+        <p class="muted" x-text="t('tpl.uploadHint')"></p>
+        <label class="field">
+          <span x-text="t('tpl.name')"></span>
+          <input class="input" data-testid="tpl-name" x-model.trim="upload.name" :placeholder="t('tpl.namePh')">
+        </label>
+        <label class="field">
+          <span x-text="t('tpl.file')"></span>
+          <input class="input file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" data-testid="tpl-file"
+                 @change="upload.file = $event.target.files[0] || null">
+        </label>
+        <button class="btn btn-primary" type="button" data-testid="tpl-upload" :disabled="!upload.file || busy"
+                @click="uploadVideo()" x-text="busy ? t('common.uploading') : t('tpl.upload')"></button>
+
+        <div x-show="templates.length" class="spaced">
+          <h3 x-text="t('tpl.existing')"></h3>
+          <ul class="list">
+            <template x-for="x in templates" :key="x.id">
+              <li class="list-row">
+                <button type="button" class="link" @click="openTemplate(x.id)" x-text="x.name"></button>
+                <span class="muted" x-text="`${x.width}×${x.height} · ${x.duration.toFixed(1)}s`"></span>
+              </li>
+            </template>
+          </ul>
         </div>
-      </label>
+      </div>
 
-      <label class="field">
-        <span x-text="t('job.output')"></span>
-        <div class="row">
-          <input class="input" data-testid="output-dir" :aria-label="t('job.output')" x-model.trim="form.output_dir" :placeholder="t('job.pathHint')">
-          <button class="btn" type="button" @click="pick('output_dir')" x-text="t('common.browse')"></button>
+      <div class="grid-2" x-show="tpl">
+        <div class="card preview-card">
+          <div class="frame" :style="tpl ? `aspect-ratio:${tpl.width}/${tpl.height}` : ''">
+            <img :src="previewUrl" alt="" data-testid="frame" @load="previewBusy = false">
+            <div class="cover-box" x-show="tpl && tpl.cover && !showPreview" :style="coverStyle()"></div>
+          </div>
+          <label class="field">
+            <span x-text="`${t('tpl.time')}: ${frameT.toFixed(1)}s`"></span>
+            <input type="range" min="0" :max="tpl ? tpl.duration : 1" step="0.1" x-model.number="frameT"
+                   @change="refreshFrame()" :aria-label="t('tpl.time')">
+          </label>
+          <div class="row wrap">
+            <button class="btn" type="button" data-testid="preview" @click="previewCaption()"
+                    x-text="previewBusy ? t('common.loading') : t('tpl.preview')"></button>
+            <button class="btn btn-ghost" type="button" x-show="showPreview" @click="showPreview = false; refreshFrame()"
+                    x-text="t('tpl.showOriginal')"></button>
+          </div>
+          <p class="muted small" x-text="t('tpl.previewHint')"></p>
         </div>
-      </label>
 
-      <label class="field">
-        <span x-text="t('job.preset')"></span>
-        <select class="select" data-testid="preset" x-model="form.preset">
-          <template x-for="n in presets" :key="n"><option :value="n" x-text="n"></option></template>
-        </select>
-      </label>
+        <div class="card" x-show="tpl">
+          <template x-if="tpl">
+            <div>
+              <div class="row between">
+                <h2 x-text="tpl.name"></h2>
+                <button class="btn btn-ghost" type="button" @click="closeTemplate()" x-text="t('tpl.change')"></button>
+              </div>
+              <div class="row wrap">
+                <label class="field grow"><span x-text="t('tpl.name')"></span>
+                  <input class="input" x-model.trim="tpl.name"></label>
+                <label class="field"><span x-text="t('tpl.app')"></span>
+                  <input class="input short" x-model.trim="tpl.app"></label>
+                <label class="field"><span x-text="t('tpl.concept')"></span>
+                  <input class="input short" x-model.trim="tpl.concept"></label>
+              </div>
 
-      <p class="error" role="alert" x-show="error" x-text="error"></p>
+              <h3 x-text="t('tpl.captions')"></h3>
+              <p class="muted small" x-text="t('tpl.captionsHint')"></p>
+              <template x-for="(c, i) in tpl.captions" :key="i">
+                <div class="line-row">
+                  <input class="input num" type="number" step="0.05" min="0" x-model.number="c.start" :aria-label="t('tpl.start')">
+                  <input class="input num" type="number" step="0.05" min="0" x-model.number="c.end" :aria-label="t('tpl.end')">
+                  <input class="input grow" x-model="c.text" :aria-label="t('tpl.text')" data-testid="caption-text">
+                  <button class="btn btn-ghost" type="button" @click="tpl.captions.splice(i, 1)" :aria-label="t('common.remove')">✕</button>
+                </div>
+              </template>
+              <button class="btn" type="button" @click="addLine('captions')" x-text="t('tpl.addCaption')"></button>
 
-      <div class="row">
-        <button class="btn btn-primary" type="button" data-testid="run" @click="run()"
-                :disabled="job.status === 'running' || !canRun" x-text="t('job.run')"></button>
-        <button class="btn" type="button" @click="stop()" x-show="job.status === 'running'"
-                x-text="t('job.stop')"></button>
+              <details class="spaced">
+                <summary x-text="t('tpl.styleTitle')"></summary>
+                <div class="row wrap">
+                  <label class="field"><span x-text="t('style.size')"></span>
+                    <input class="input num" type="number" min="10" max="300" x-model.number="tpl.style.size"></label>
+                  <label class="field"><span x-text="t('style.centerY')"></span>
+                    <input class="input num" type="number" min="0" x-model.number="tpl.style.center_y"></label>
+                  <label class="field"><span x-text="t('style.maxWidth')"></span>
+                    <input class="input num" type="number" min="10" x-model.number="tpl.style.max_width"></label>
+                  <label class="field"><span x-text="t('style.maxLines')"></span>
+                    <input class="input num" type="number" min="1" max="6" x-model.number="tpl.style.max_lines"></label>
+                  <label class="field"><span x-text="t('style.glow')"></span>
+                    <input class="color" type="color" x-model="tpl.style.glow_color"></label>
+                  <label class="field"><span x-text="t('style.textColor')"></span>
+                    <input class="color" type="color" x-model="tpl.style.text_color"></label>
+                </div>
+                <label class="check"><input type="checkbox" x-model="tpl.style.uppercase"><span x-text="t('style.uppercase')"></span></label>
+                <label class="check"><input type="checkbox" x-model="tpl.style.glow"><span x-text="t('style.glowOn')"></span></label>
+                <h4 x-text="t('cover.title')"></h4>
+                <p class="muted small" x-text="t('cover.hint')"></p>
+                <div class="row wrap" x-show="tpl.cover">
+                  <template x-for="k in ['x','y','w','h']" :key="k">
+                    <label class="field"><span x-text="t('cover.' + k)"></span>
+                      <input class="input num" type="number" min="0" x-model.number="tpl.cover[k]"></label>
+                  </template>
+                </div>
+              </details>
+
+              <h3 x-text="t('tpl.audio')"></h3>
+              <div class="radio-group" role="radiogroup" :aria-label="t('tpl.audio')">
+                <template x-for="m in ['original','separate','music_file','none']" :key="m">
+                  <label class="radio" :class="{ disabled: m === 'separate' && !caps.separate }">
+                    <input type="radio" name="audio_mode" :value="m" x-model="tpl.audio_mode" :data-testid="'audio-' + m"
+                           :disabled="m === 'separate' && !caps.separate">
+                    <span><b x-text="t('audio.' + m)"></b><br><small class="muted" x-text="t('audio.' + m + 'Hint')"></small></span>
+                  </label>
+                </template>
+              </div>
+              <div x-show="tpl.audio_mode === 'music_file'" class="row wrap">
+                <input class="input file grow" type="file" accept="audio/*" @change="uploadMusic($event.target.files[0])">
+                <span class="muted small" x-text="tpl.music ? t('audio.hasMusic') : t('audio.noMusic')"></span>
+              </div>
+
+              <div x-show="tpl.audio_mode !== 'original'">
+                <h3 x-text="t('tpl.voice')"></h3>
+                <p class="muted small" x-text="t('tpl.voiceHint')"></p>
+                <template x-for="(c, i) in tpl.voice" :key="i">
+                  <div class="line-row">
+                    <input class="input num" type="number" step="0.05" min="0" x-model.number="c.start" :aria-label="t('tpl.start')">
+                    <input class="input num" type="number" step="0.05" min="0" x-model.number="c.end" :aria-label="t('tpl.end')">
+                    <input class="input grow" x-model="c.text" :aria-label="t('tpl.text')">
+                    <button class="btn btn-ghost" type="button" @click="tpl.voice.splice(i, 1)" :aria-label="t('common.remove')">✕</button>
+                  </div>
+                </template>
+                <button class="btn" type="button" @click="addLine('voice')" x-text="t('tpl.addVoice')"></button>
+              </div>
+
+              <label class="field spaced"><span x-text="t('tpl.glossary')"></span>
+                <input class="input" :value="tpl.glossary.join(', ')" :placeholder="t('tpl.glossaryPh')"
+                       @change="tpl.glossary = $event.target.value.split(',').map(s => s.trim()).filter(Boolean)"></label>
+
+              <div class="row actions">
+                <button class="btn" type="button" @click="saveTemplate()" x-text="t('common.save')"></button>
+                <button class="btn btn-primary" type="button" data-testid="next-1" @click="saveTemplate(2)"
+                        :disabled="!tpl.captions.length" x-text="t('common.next')"></button>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
     </section>
 
-    <section class="card" aria-live="polite" x-show="job.status !== 'idle'">
-      <h2 x-text="t('job.progress')"></h2>
-      <progress class="progress" :max="job.total || 1" :value="job.done"></progress>
-      <p data-testid="status">
-        <span x-text="t('status.' + job.status)"></span>
-        <span x-show="job.total" x-text="`— ${job.done}/${job.total}`"></span>
-      </p>
-      <ul class="failed" x-show="(job.failed || []).length">
-        <template x-for="f in job.failed" :key="f.source"><li x-text="`${f.source}: ${f.error}`"></li></template>
-      </ul>
+    <!-- ========== BƯỚC 2: NGÔN NGỮ ========== -->
+    <section class="card" x-show="step === 2">
+      <h2 x-text="t('langs.title')"></h2>
+      <p class="muted" x-text="t('langs.hint')"></p>
+      <div class="lang-grid">
+        <template x-for="l in langs" :key="l.code">
+          <label class="lang-chip" :class="{ on: picked.includes(l.code) }">
+            <input type="checkbox" :value="l.code" x-model="picked" :data-testid="'lang-' + l.code">
+            <span x-text="l.name"></span>
+            <small class="muted" x-text="l.code"></small>
+            <small class="badge" x-show="usesVoice && caps.offline_voice && l.kokoro" x-text="t('langs.offline')"></small>
+          </label>
+        </template>
+      </div>
+      <div class="row wrap spaced" x-show="usesVoice">
+        <label class="field"><span x-text="t('langs.gender')"></span>
+          <select class="select" x-model="gender">
+            <option value="f" x-text="t('langs.female')"></option>
+            <option value="m" x-text="t('langs.male')"></option>
+          </select>
+        </label>
+      </div>
+      <div class="row actions">
+        <button class="btn" type="button" @click="go(1)" x-text="t('common.back')"></button>
+        <button class="btn btn-primary" type="button" data-testid="next-2" :disabled="!picked.length" @click="go(3)"
+                x-text="t('common.next')"></button>
+      </div>
+    </section>
+
+    <!-- ========== BƯỚC 3: TEXT / BẢN DỊCH ========== -->
+    <section x-show="step === 3">
+      <div class="card">
+        <h2 x-text="t('tr.title')"></h2>
+        <p class="muted" x-text="t('tr.hint')"></p>
+        <details>
+          <summary x-text="t('tr.helper')"></summary>
+          <div class="row wrap">
+            <label class="field"><span x-text="t('tr.hooksPerLang')"></span>
+              <input class="input num" type="number" min="1" max="10" x-model.number="hooksPerLang"></label>
+            <button class="btn" type="button" @click="copyPrompt()" x-text="t('tr.copyPrompt')"></button>
+            <button class="btn" type="button" x-show="caps.translate_api" @click="autoTranslate()"
+                    x-text="busy ? t('common.loading') : t('tr.auto')"></button>
+          </div>
+          <label class="field"><span x-text="t('tr.paste')"></span>
+            <textarea class="input area" rows="4" x-model="pasteReply" :placeholder="t('tr.pastePh')"></textarea></label>
+          <button class="btn" type="button" @click="applyReply()" :disabled="!pasteReply.trim()" x-text="t('tr.apply')"></button>
+        </details>
+      </div>
+
+      <template x-for="code in picked" :key="code">
+        <div class="card lang-card">
+          <h3 x-text="langName(code)"></h3>
+          <template x-if="tr[code]"><div>
+          <label class="field">
+            <span x-text="t('tr.hooks')"></span>
+            <textarea class="input area" rows="3" x-model="tr[code].hooks" :data-testid="'hooks-' + code"
+                      :dir="isRtl(code) ? 'rtl' : 'auto'" :placeholder="tpl && tpl.captions[0] ? tpl.captions[0].text : ''"></textarea>
+          </label>
+          <ul class="warn small" x-show="hookWarnings(code).length">
+            <template x-for="w in hookWarnings(code)" :key="w"><li x-text="w"></li></template>
+          </ul>
+          <template x-for="(c, i) in (tpl ? tpl.captions.slice(1) : [])" :key="'c' + i">
+            <label class="field"><span x-text="`${t('tr.caption')} ${i + 2}: ${c.text}`"></span>
+              <input class="input" x-model="tr[code].captions[i + 1]" :dir="isRtl(code) ? 'rtl' : 'auto'"></label>
+          </template>
+          <div x-show="usesVoice">
+            <label class="check"><input type="checkbox" x-model="tr[code].syncHook"><span x-text="t('tr.syncHook')"></span></label>
+            <template x-for="(v, i) in (tpl ? tpl.voice : [])" :key="'v' + i">
+              <label class="field">
+                <span x-text="`${t('tr.voiceLine')} ${i + 1} (${(v.end - v.start).toFixed(1)}s): ${v.text}`"></span>
+                <input class="input" x-model="tr[code].voice[i]" :disabled="i === 0 && tr[code].syncHook"
+                       :data-testid="`voice-${code}-${i}`" :dir="isRtl(code) ? 'rtl' : 'auto'"
+                       :placeholder="i === 0 && tr[code].syncHook ? t('tr.fromHook') : ''">
+              </label>
+            </template>
+          </div>
+          </div></template>
+        </div>
+      </template>
+
+      <div class="card row between wrap sticky-bar">
+        <span data-testid="variant-count" x-text="t('tr.willMake').replace('{n}', variants().length)"></span>
+        <div class="row">
+          <button class="btn" type="button" @click="go(2)" x-text="t('common.back')"></button>
+          <button class="btn btn-primary" type="button" data-testid="run" @click="run()"
+                  :disabled="!variants().length || job.status === 'running'" x-text="t('tr.run')"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== BƯỚC 4: KẾT QUẢ ========== -->
+    <section x-show="step === 4">
+      <div class="card" aria-live="polite">
+        <div class="row between wrap">
+          <h2 x-text="t('res.title')"></h2>
+          <div class="row">
+            <button class="btn" type="button" @click="stop()" x-show="job.status === 'running'" x-text="t('res.stop')"></button>
+            <a class="btn btn-primary" x-show="job.batch_id && (job.items || []).some(i => i.ok)"
+               :href="`/api/batches/${job.batch_id}/zip`" data-testid="zip" x-text="t('res.zip')"></a>
+          </div>
+        </div>
+        <progress class="progress" :max="job.total || 1" :value="job.done"></progress>
+        <p data-testid="status">
+          <span x-text="t('status.' + job.status)"></span>
+          <span x-show="job.total" x-text="`— ${job.done}/${job.total}`"></span>
+          <span x-show="job.status === 'running'" class="muted" x-text="t('res.wait')"></span>
+        </p>
+        <p class="error" role="alert" x-show="job.error" x-text="job.error"></p>
+      </div>
+
+      <div class="result-grid">
+        <template x-for="it in (job.items || [])" :key="it.lang + (it.output || '')">
+          <article class="card result" :data-testid="'result-' + it.lang.replace(' ', '-')">
+            <video x-show="it.ok" controls preload="metadata" playsinline :src="fileUrl(it)"></video>
+            <h3 x-text="it.lang"></h3>
+            <p class="error small" x-show="!it.ok" x-text="it.error"></p>
+            <ul class="qa">
+              <template x-for="c in it.checks" :key="c.name">
+                <li :class="c.ok ? 'ok' : 'bad'"><span x-text="c.ok ? '✓' : '!'"></span>
+                  <span x-text="`${c.name}: ${c.detail}`"></span></li>
+              </template>
+            </ul>
+            <div class="row wrap">
+              <a class="btn" x-show="it.ok" :href="fileUrl(it) + '?download=1'" x-text="t('res.download')"></a>
+              <button class="btn btn-ghost" type="button" @click="fixOne(it)" x-text="t('res.fix')"></button>
+            </div>
+          </article>
+        </template>
+      </div>
     </section>
   </main>
 </div>

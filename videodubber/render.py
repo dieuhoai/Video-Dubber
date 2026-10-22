@@ -9,10 +9,13 @@ from .models import Box, TimedLine
 
 
 def feather_mask(box: Box, out: Path) -> Path:
-    """Mặt nạ xám: giữa trắng, mép mờ dần — để vùng làm mờ hoà vào nền, không lộ khung chữ nhật."""
+    """Mặt nạ xám: giữa trắng, mép trên/dưới mờ dần — để vùng làm mờ hoà vào nền, không lộ khung chữ nhật.
+
+    Không làm mờ dần 2 bên: caption thường kéo gần hết bề ngang, mép trái/phải mờ dần sẽ lộ chữ cũ.
+    """
     f = max(min(box.h // 5, 50), 4)
     ffmpeg("-f", "lavfi", "-i", f"color=black:s={box.w}x{box.h}:d=0.04", "-vf",
-           f"drawbox=x={min(f // 2, box.w // 4)}:y={f}:w={max(box.w - f, 1)}:h={max(box.h - 2 * f, 1)}:"
+           f"drawbox=x=0:y={f}:w={box.w}:h={max(box.h - 2 * f, 1)}:"
            f"color=white:t=fill,boxblur={f}:2,format=gray", "-frames:v", "1", str(out), timeout=60)
     return out
 
@@ -58,4 +61,24 @@ def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None
     ffmpeg(*args, "-filter_complex", ";".join(parts), "-map", "[vout]", *amap,
            "-t", f"{duration:.3f}", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out), timeout=1800)
+    return out
+
+
+def preview_frame(video: Path, t: float, ass: Path, cover: Box | None, out: Path, workdir: Path) -> Path:
+    """Ảnh xem trước 1 khung hình với caption mới (ass phải có câu chạy từ 0s) — để chỉnh vị trí/kiểu chữ nhanh."""
+    args = ["-ss", f"{max(t, 0):.3f}", "-i", str(video)]
+    parts: list[str] = []
+    last = "0:v"
+    if cover:
+        mask = feather_mask(cover, workdir / "mask.png")
+        args += ["-i", str(mask)]
+        blur = max(min(cover.h // 6, 40), 4)
+        parts += ["[0:v]split[base][src]",
+                  f"[src]crop={cover.w}:{cover.h}:{cover.x}:{cover.y},boxblur={blur}:4,format=yuva420p[bl]",
+                  "[1:v]format=gray[m]", "[bl][m]alphamerge[patch]",
+                  f"[base][patch]overlay={cover.x}:{cover.y}[cov]"]
+        last = "cov"
+    parts.append(f"[{last}]ass=filename='{_filter_path(ass)}':fontsdir='{_filter_path(fonts_dir())}'[vout]")
+    ffmpeg(*args, "-filter_complex", ";".join(parts), "-map", "[vout]", "-frames:v", "1", "-q:v", "3", str(out),
+           timeout=60)
     return out

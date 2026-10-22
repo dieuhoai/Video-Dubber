@@ -1,12 +1,15 @@
-"""Smoke test giao diện bằng Playwright: nhập đường dẫn → chạy → hoàn tất, không lỗi JS."""
+"""Smoke test giao diện bằng Playwright: upload → caption → chọn ngôn ngữ → 2 câu hook → 2 video, không lỗi JS."""
+import shutil
 import socket
 import threading
 import time
 
 import pytest
 
+from videodubber.media import ffmpeg
+
 pw = pytest.importorskip("playwright.sync_api")
-pytestmark = pytest.mark.ui
+pytestmark = [pytest.mark.ui, pytest.mark.skipif(not shutil.which("ffmpeg"), reason="cần ffmpeg")]
 
 TOKEN = "ui-test"
 
@@ -36,21 +39,45 @@ def server():
     th.join(5)
 
 
-@pytest.mark.parametrize("viewport", [(1440, 900), (375, 812)])
-def test_run_flow(server, sample_input, tmp_path, viewport):
-    with pw.sync_playwright() as p:
+@pytest.fixture
+def video(tmp_path):
+    out = tmp_path / "Ads gốc.mp4"
+    ffmpeg("-f", "lavfi", "-i", "testsrc2=s=360x640:r=30:d=3", "-f", "lavfi", "-i", "sine=duration=3", "-shortest",
+           "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", str(out))
+    return out
+
+
+def _launch(p):
+    for kw in ({}, {"executable_path": "/opt/pw-browsers/chromium"}):
         try:
-            browser = p.chromium.launch()
-        except Exception as e:  # noqa: BLE001
-            pytest.skip(f"Chưa cài Chromium: {e}")
+            return p.chromium.launch(**kw)
+        except Exception:  # noqa: BLE001 — thử đường dẫn Chromium khác
+            continue
+    pytest.skip("Chưa cài Chromium")
+
+
+@pytest.mark.parametrize("viewport", [(1440, 900), (375, 812)])
+def test_full_flow(server, video, viewport):
+    with pw.sync_playwright() as p:
+        browser = _launch(p)
         page = browser.new_page(viewport={"width": viewport[0], "height": viewport[1]})
         errors: list[str] = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(f"{server}/?t={TOKEN}")
-        page.get_by_test_id("input-dir").fill(str(sample_input))
-        page.get_by_test_id("output-dir").fill(str(tmp_path / "out"))
+        page.get_by_test_id("tpl-file").set_input_files(str(video))
+        page.get_by_test_id("tpl-upload").click()
+        pw.expect(page.get_by_test_id("frame")).to_be_visible(timeout=15_000)
+        page.get_by_role("button", name="+").first.click()
+        page.get_by_test_id("caption-text").first.fill("As-tu essayé ?")
+        page.get_by_test_id("next-1").click()
+        page.get_by_test_id("lang-es").check()
+        page.get_by_test_id("next-2").click()
+        page.get_by_test_id("hooks-es").fill("¿Ya probaste?\n¡Tarjetas con IA!")
+        pw.expect(page.get_by_test_id("variant-count")).to_contain_text("2")
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "tràn ngang"
         page.get_by_test_id("run").click()
-        pw.expect(page.get_by_test_id("status")).to_contain_text("3/3", timeout=10_000)
+        pw.expect(page.get_by_test_id("status")).to_contain_text("2/2", timeout=120_000)
+        pw.expect(page.locator("video")).to_have_count(2)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "tràn ngang"
         browser.close()
         assert not errors, errors

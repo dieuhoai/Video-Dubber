@@ -1,4 +1,7 @@
-"""Server web local: chỉ nghe 127.0.0.1, token + kiểm Host/Origin, CSP chặt, tự mở trình duyệt."""
+"""Server web: mặc định chỉ nghe 127.0.0.1; chế độ máy chủ nội bộ (--host 0.0.0.0) cho cả team dùng chung.
+
+Luôn giữ: token (link mời có ?t=…), kiểm Host/Origin, CSP chặt.
+"""
 from __future__ import annotations
 
 import argparse
@@ -18,13 +21,13 @@ from fastapi.staticfiles import StaticFiles
 
 from videodubber import APP_NAME
 
-from .api import fs, jobs, presets
+from .api import batches, jobs, meta, templates
 from .state import STATE
 
 STATIC = Path(__file__).parent / "static"
 COOKIE = "videodubber_token"
 TOKEN_HEADER = "x-videodubber-token"
-CSP = ("default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; "
+CSP = ("default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; "
        "script-src 'self' 'unsafe-eval'; connect-src 'self' ws: wss:; font-src 'self'; frame-ancestors 'none'")
 
 EXPIRED_PAGE = f"""<!doctype html><html lang="vi"><meta charset="utf-8"><title>{APP_NAME}</title>
@@ -92,7 +95,7 @@ def create_app(token: str, allowed_hosts: Iterable[str]) -> FastAPI:
         finally:
             STATE.remove_client(loop, q)
 
-    for r in (fs.router, presets.router, jobs.router):
+    for r in (templates.router, jobs.router, batches.router, meta.router):
         app.include_router(r)
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     return app
@@ -111,10 +114,6 @@ def free_port(preferred: int = 8765) -> int:
 
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv[:1] == ["--pick"]:  # bản đóng gói: hộp chọn thư mục gốc chạy trong process con
-        from .picker import run
-        run(argv[1] if len(argv) > 1 else "dir", argv[2] if len(argv) > 2 else "")
-        return
     if argv[:1] == ["cli"]:  # bản đóng gói: dùng CLI qua cùng file exe
         from videodubber.__main__ import main as cli_main
         sys.exit(cli_main(argv[1:]))
@@ -122,6 +121,10 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--token", help="Token cố định (mặc định ngẫu nhiên mỗi lần chạy)")
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="0.0.0.0 = mở cho máy khác trong mạng nội bộ (máy chủ dùng chung)")
+    ap.add_argument("--allow-host", action="append", default=[],
+                    help="Tên miền/IP mà người dùng gõ để vào (vd dubber.lutech.local hoặc 192.168.1.20). Lặp được.")
     a = ap.parse_args(argv)
     for s in (sys.stdout, sys.stderr):
         try:
@@ -129,15 +132,24 @@ def main(argv: list[str] | None = None) -> None:
         except Exception:  # noqa: BLE001
             pass
     import uvicorn
-    port = free_port(a.port)
+    shared = a.host != "127.0.0.1"
+    port = a.port if shared else free_port(a.port)
     token = a.token or secrets.token_urlsafe(24)
     STATE.port = port
-    app = create_app(token, {f"127.0.0.1:{port}", f"localhost:{port}"})
-    url = f"http://127.0.0.1:{port}/?t={token}"
+    hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+    for h in a.allow_host:
+        hosts |= {h, f"{h}:{port}"}
+    if shared and not a.allow_host:
+        print("Cảnh báo: chưa có --allow-host, máy khác sẽ bị chặn. Thêm --allow-host <IP hoặc tên máy chủ>.")
+    app = create_app(token, hosts)
+    shown = a.allow_host[0] if shared and a.allow_host else "127.0.0.1"
+    url = f"http://{shown}:{port}/?t={token}"
     print(f"{APP_NAME} đang chạy: {url}\nĐóng cửa sổ này hoặc bấm Ctrl+C để thoát.", flush=True)
-    if not a.no_browser:
+    if shared:
+        print("Gửi link trên cho đồng nghiệp (link có mã truy cập — chỉ chia sẻ trong công ty).")
+    if not a.no_browser and not shared:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(app, host=a.host, port=port, log_level="warning")
 
 
 if __name__ == "__main__":
