@@ -4,6 +4,8 @@
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_all, copy_metadata
+
 ROOT = Path(SPECPATH).parent
 APP = "VideoDubber"            # đổi bởi scripts/new_project.py
 BUNDLE_ID = "io.github.videodubber"
@@ -11,16 +13,34 @@ BUNDLE_ID = "io.github.videodubber"
 datas = [
     (str(ROOT / "web" / "static"), "web/static"),
     (str(ROOT / "fonts"), "fonts"),
+    (str(ROOT / "build" / "fonts.conf"), "."),
     *[(str(p), "models") for p in (ROOT / "models").glob("*") if p.is_file() and p.name != ".gitkeep"],
     (str(ROOT / "README.md"), "."),
     (str(ROOT / "LICENSE"), "."),
 ]
-binaries = [(str(p), "bin") for p in (ROOT / "bin").glob("*") if p.is_file() and p.name != ".gitkeep"]
+binaries = [(str(p), "bin") for p in (ROOT / "bin").glob("*")
+            if p.is_file() and p.name not in (".gitkeep", "uv", "uv.exe")]  # uv chỉ dùng lúc cài, không cần trong app
 
 hidden = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto", "uvicorn.protocols.http.h11_impl",
           "uvicorn.protocols.websockets.auto", "uvicorn.protocols.websockets.websockets_impl",
           "uvicorn.lifespan.on", "multipart", "kokoro_onnx", "onnxruntime",
           "soundfile", "edge_tts"]
+
+# Thư viện giọng đọc/tách nhạc có file dữ liệu + thư viện động riêng → gom đủ, thiếu là lỗi lúc chạy.
+for pkg in ("kokoro_onnx", "espeakng_loader", "phonemizer", "language_tags", "segments", "csvw", "onnxruntime",
+            "soundfile", "edge_tts"):
+    try:
+        d, b, h = collect_all(pkg)
+    except Exception:  # noqa: BLE001 — gói không có trên máy build thì bỏ qua
+        continue
+    datas += d
+    binaries += b
+    hidden += h
+for dist in ("kokoro-onnx", "espeakng-loader", "phonemizer", "phonemizer-fork", "onnxruntime", "edge-tts"):
+    try:
+        datas += copy_metadata(dist)
+    except Exception:  # noqa: BLE001
+        pass
 
 a = Analysis([str(ROOT / "build" / "launcher.py")], pathex=[str(ROOT)], binaries=binaries, datas=datas,
              hiddenimports=hidden, excludes=["pytest", "playwright"], noarchive=False)
