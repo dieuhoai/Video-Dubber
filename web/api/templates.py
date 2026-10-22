@@ -141,7 +141,8 @@ def preview(tid: str, body: dict, tasks: BackgroundTasks) -> FileResponse:
         out = cache / f"preview_{secrets.token_hex(4)}.jpg"  # mỗi người xem 1 file, xoá sau khi gửi
         tasks.add_task(out.unlink, missing_ok=True)
         try:
-            preview_frame(store.template_dir(tid) / tpl.video, t, ass, tpl.cover, out, Path(tmp))
+            preview_frame(store.template_dir(tid) / tpl.video, t, ass, tpl.cover, out, Path(tmp),
+                          size=(tpl.width, tpl.height))
         except MediaError as e:
             raise HTTPException(500, str(e)) from e
     return FileResponse(out, media_type="image/jpeg", headers={"Cache-Control": "no-store"})

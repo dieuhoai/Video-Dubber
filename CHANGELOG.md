@@ -3,6 +3,8 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Sửa
+- Caption mới ngắn hơn caption gốc không còn lộ chữ cũ ở 2 bên: vùng chữ cũ được xoá sạch (tô lại từ nền xung quanh) thay vì chỉ làm mờ.
 ### Thêm
 - Tải video gốc, khai báo caption/lời thoại, xem thử caption mới trên khung hình.
 - Nhân bản hàng loạt: mỗi dòng câu hook × mỗi ngôn ngữ = 1 video; 19 ngôn ngữ, giọng nữ/nam.

@@ -79,7 +79,7 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
         audio = mix([], music, tpl.duration, work / "mix.wav")
 
     render(tdir / tpl.video, ass, out, tpl.duration, tpl.cover, tpl.captions, audio,
-           keep_original_audio=tpl.audio_mode == "original", workdir=work)
+           keep_original_audio=tpl.audio_mode == "original", workdir=work, size=(tpl.width, tpl.height))
     checks = [
         check_duration(out, tpl),
         check_layout(layouts),

@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .captions import fonts_dir
-from .media import ffmpeg
+from .media import ffmpeg, probe
 from .models import Box, TimedLine
 
 
@@ -14,10 +14,35 @@ def feather_mask(box: Box, out: Path) -> Path:
     Không làm mờ dần 2 bên: caption thường kéo gần hết bề ngang, mép trái/phải mờ dần sẽ lộ chữ cũ.
     """
     f = max(min(box.h // 5, 50), 4)
+    # Dốc mờ chỉ theo chiều dọc (geq) — boxblur cũ làm mờ cả 2 bên nên chữ cũ ở mép trái/phải lộ ra.
     ffmpeg("-f", "lavfi", "-i", f"color=black:s={box.w}x{box.h}:d=0.04", "-vf",
-           f"drawbox=x=0:y={f}:w={box.w}:h={max(box.h - 2 * f, 1)}:"
-           f"color=white:t=fill,boxblur={f}:2,format=gray", "-frames:v", "1", str(out), timeout=60)
+           f"format=gray,geq=lum='255*clip(min(Y\\,H-1-Y)/{f}\\,0\\,1)'", "-frames:v", "1", str(out), timeout=60)
     return out
+
+
+def _cover_parts(cover: Box, width: int, height: int, enable: str | None) -> list[str]:
+    """Xoá caption cũ: delogo tô lại vùng chữ từ các điểm ảnh viền ngoài (không còn nét chữ nào),
+    làm mờ nhẹ cho mịn, rồi dán lại với mép trên/dưới mờ dần.
+
+    Chỉ làm mờ (cách cũ) không đủ: chữ cũ dài hơn chữ mới sẽ lộ bóng ở 2 bên.
+    """
+    # delogo cần chừa ít nhất 1px quanh vùng xoá.
+    x0, y0 = max(cover.x, 1), max(cover.y, 1)
+    x1, y1 = min(cover.x + cover.w, width - 1), min(cover.y + cover.h, height - 1)
+    blur = max(min(cover.h // 12, 20), 2)
+    when = f":enable='{enable}'" if enable else ""
+    return [
+        "[0:v]split[base][src]",
+        f"[src]delogo=x={x0}:y={y0}:w={max(x1 - x0, 1)}:h={max(y1 - y0, 1)},"
+        f"crop={cover.w}:{cover.h}:{cover.x}:{cover.y},boxblur={blur}:2,format=yuva420p[bl]",
+        "[1:v]format=gray[m]", "[bl][m]alphamerge[patch]",
+        f"[base][patch]overlay={cover.x}:{cover.y}:eof_action=pass{when}[cov]",
+    ]
+
+
+def _frame_size(video: Path) -> tuple[int, int]:
+    info = probe(video)
+    return info.width, info.height
 
 
 def _enable(lines: list[TimedLine]) -> str:
@@ -31,7 +56,7 @@ def _filter_path(p: Path) -> str:
 
 
 def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None, captions: list[TimedLine],
-           audio: Path | None, keep_original_audio: bool, workdir: Path) -> Path:
+           audio: Path | None, keep_original_audio: bool, workdir: Path, size: tuple[int, int] | None = None) -> Path:
     """Xuất MP4 H.264/AAC. Thời lượng luôn = video gốc."""
     args = ["-i", str(video)]
     parts: list[str] = []
@@ -39,13 +64,8 @@ def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None
     if cover and captions:
         mask = feather_mask(cover, workdir / "mask.png")
         args += ["-loop", "1", "-t", f"{duration:.3f}", "-i", str(mask)]
-        blur = max(min(cover.h // 6, 40), 4)
-        parts += [
-            "[0:v]split[base][src]",
-            f"[src]crop={cover.w}:{cover.h}:{cover.x}:{cover.y},boxblur={blur}:4,format=yuva420p[bl]",
-            "[1:v]format=gray[m]", "[bl][m]alphamerge[patch]",
-            f"[base][patch]overlay={cover.x}:{cover.y}:eof_action=pass:enable='{_enable(captions)}'[cov]",
-        ]
+        w, h = size or _frame_size(video)
+        parts += _cover_parts(cover, w, h, _enable(captions))
         last = "cov"
     parts.append(f"[{last}]ass=filename='{_filter_path(ass)}':fontsdir='{_filter_path(fonts_dir())}',"
                  "format=yuv420p[vout]")
@@ -64,7 +84,8 @@ def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None
     return out
 
 
-def preview_frame(video: Path, t: float, ass: Path, cover: Box | None, out: Path, workdir: Path) -> Path:
+def preview_frame(video: Path, t: float, ass: Path, cover: Box | None, out: Path, workdir: Path,
+                  size: tuple[int, int] | None = None) -> Path:
     """Ảnh xem trước 1 khung hình với caption mới (ass phải có câu chạy từ 0s) — để chỉnh vị trí/kiểu chữ nhanh."""
     args = ["-ss", f"{max(t, 0):.3f}", "-i", str(video)]
     parts: list[str] = []
@@ -72,11 +93,8 @@ def preview_frame(video: Path, t: float, ass: Path, cover: Box | None, out: Path
     if cover:
         mask = feather_mask(cover, workdir / "mask.png")
         args += ["-i", str(mask)]
-        blur = max(min(cover.h // 6, 40), 4)
-        parts += ["[0:v]split[base][src]",
-                  f"[src]crop={cover.w}:{cover.h}:{cover.x}:{cover.y},boxblur={blur}:4,format=yuva420p[bl]",
-                  "[1:v]format=gray[m]", "[bl][m]alphamerge[patch]",
-                  f"[base][patch]overlay={cover.x}:{cover.y}[cov]"]
+        w, h = size or _frame_size(video)
+        parts += _cover_parts(cover, w, h, None)
         last = "cov"
     parts.append(f"[{last}]ass=filename='{_filter_path(ass)}':fontsdir='{_filter_path(fonts_dir())}'[vout]")
     ffmpeg(*args, "-filter_complex", ";".join(parts), "-map", "[vout]", "-frames:v", "1", "-q:v", "3", str(out),

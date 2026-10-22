@@ -16,7 +16,7 @@ Nguồn: brief "Tool nhân bản video quảng cáo đa ngôn ngữ (text + voic
 4. **Kết quả** — lưới video, huy hiệu QA, tải từng file / ZIP, render lại 1 ngôn ngữ.
 
 ## Xử lý mỗi ngôn ngữ
-- Che caption cũ: vùng khung được làm mờ mạnh, viền mờ dần (feather) — chỉ trong thời gian caption hiện.
+- Xoá caption cũ: delogo tô lại toàn bộ vùng khung từ điểm ảnh viền ngoài, làm mờ nhẹ, mép trên/dưới mờ dần — chỉ trong thời gian caption hiện.
 - Caption mới: ASS/libass, font Fredoka Bold (OFL, đóng kèm) + fallback Noto; chữ trắng viền đen, glow xanh ngọc; tự xuống dòng,
   tự giảm cỡ chữ để không quá `max_lines` dòng.
 - Âm thanh: `original` (giữ nguyên, chỉ đổi chữ) · `music_file` · `separate` (tách nhạc bằng MDX-Net ONNX, chạy CPU) · `none`.

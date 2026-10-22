@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "video-dubber"
-version = "0.1.1"
+version = "0.1.2"
 description = "Video Dubber — nhân bản video quảng cáo đa ngôn ngữ (caption + voice)"
 readme = "README.md"
 requires-python = ">=3.10"
