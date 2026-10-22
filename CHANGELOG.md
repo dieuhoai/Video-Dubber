@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Thêm
+- Xoá caption cũ kiểu mới "Chỉ xoá chữ, giữ nền glow": chỉ thay nét chữ cũ, nền glow và phần video xung quanh giữ nguyên — không còn dải mờ lớn che video. Kiểu cũ "Làm mờ cả khung" vẫn chọn được.
 - Chế độ âm thanh "Tách nhạc + voice tải lên": tải file voice của bạn (MP3/WAV/M4A), tool bỏ giọng gốc, giữ nhạc nền đã tách, đặt voice từ giây bạn chọn; voice dài hơn video thì báo đỏ.
 ### Sửa
 - Kiểm tra "Glossary" so khớp nguyên từ (trước đây chữ "ai" trong "maintenant" bị tính là "AI").

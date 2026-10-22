@@ -27,7 +27,7 @@
   "tpl.time": "Preview time",
   "tpl.preview": "Preview new caption",
   "tpl.showOriginal": "Show original frame",
-  "tpl.previewHint": "The red box is the old caption area that gets blurred. Click “Preview” to see the new caption at this moment.",
+  "tpl.previewHint": "The red box marks the old text. Click “Preview” to see the new caption at this moment (first time takes 10–20s to remove old text).",
   "tpl.captions": "On-screen captions",
   "tpl.captionsHint": "Each row: start second · end second · original text. Caption 1 is the hook, replaced by each text line in step 3.",
   "tpl.start": "Start (s)",
@@ -50,7 +50,7 @@
   "style.uppercase": "All caps",
   "style.glowOn": "Glow effect",
   "cover.title": "Old caption cover",
-  "cover.hint": "Pixel coordinates of the source video. This area is blurred while captions show.",
+  "cover.hint": "Pixel coordinates of the source video. The box must contain all old text; in 'text only' mode everything except the letters is kept.",
   "cover.x": "Left (x)",
   "cover.y": "Top (y)",
   "cover.w": "Width",
@@ -111,5 +111,8 @@
   "audio.voiceOffset": "Voice starts at second",
   "audio.hasVoice": "✓ Voice file uploaded",
   "audio.noVoice": "No voice file yet",
-  "audio.voiceUploaded": "Voice uploaded — preview below"
+  "audio.voiceUploaded": "Voice uploaded — preview below",
+  "cover.mode": "How to remove old text",
+  "cover.modeText": "Remove text only, keep glow (subtle — recommended)",
+  "cover.modeBox": "Blur the whole box (for static source video)"
 }

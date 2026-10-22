@@ -15,6 +15,7 @@ from pathlib import Path
 from . import store
 from .audio import Fit, fit_clip, mix, separate_music, slots
 from .captions import build_ass
+from .clean import clean_clip
 from .io_utils import atomic_write_text
 from .langs import get_lang
 from .media import MediaError, audio_duration, ffmpeg
@@ -68,8 +69,23 @@ def prepare_music(tpl: Template, tdir: Path) -> Path | None:
     return None
 
 
+def prepare_clean(tpl: Template, tdir: Path, on_stage: Stage | None = None) -> tuple[Path, float] | None:
+    """Xoá riêng nét chữ cũ (1 lần cho mỗi template + khung che, có cache). None → làm mờ cả khung như cũ."""
+    if tpl.cover_mode != "text" or not tpl.cover or not tpl.captions:
+        return None
+    _stage(on_stage, "Xoá chữ cũ, giữ nền (chỉ lần đầu)")
+    try:
+        res = clean_clip(tdir / tpl.video, tpl.cover, tpl.captions, tpl.fps, tdir / "clean")
+    except MediaError:
+        log.exception("Không xoá riêng được chữ cũ — dùng cách làm mờ cả khung")
+        return None
+    if res is None:
+        log.info("Không tách được chữ cũ khỏi nền (nền đứng yên?) — dùng cách làm mờ cả khung")
+    return res
+
+
 def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: Path | None, tts: TTS,
-                   work: Path, on_stage: Stage | None = None) -> ItemResult:
+                   work: Path, on_stage: Stage | None = None, clean: tuple[Path, float] | None = None) -> ItemResult:
     lang = get_lang(v.lang)
     work.mkdir(parents=True, exist_ok=True)
     ass_text, layouts = build_ass(tpl.captions, v.captions, tpl.style, tpl.width, tpl.height, lang.spaces)
@@ -108,7 +124,8 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
 
     _stage(on_stage, f"{v.lang} {v.hook}: xuất video")
     render(tdir / tpl.video, ass, out, tpl.duration, tpl.cover, tpl.captions, audio,
-           keep_original_audio=tpl.audio_mode == "original", workdir=work, size=(tpl.width, tpl.height))
+           keep_original_audio=tpl.audio_mode == "original", workdir=work, size=(tpl.width, tpl.height),
+           clean=clean)
     _stage(on_stage, f"{v.lang} {v.hook}: kiểm tra")
     checks = [
         check_duration(out, tpl),
@@ -137,6 +154,7 @@ def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_sto
     if tpl.audio_mode in ("separate", "uploaded_voice") and not (tdir / "stems" / "music.wav").is_file():
         _stage(on_stage, "Tách nhạc nền khỏi giọng gốc (chỉ lần đầu, 15–90 giây)")
     music = prepare_music(tpl, tdir)
+    clean = prepare_clean(tpl, tdir, on_stage)
     if tpl.uses_voice:
         _stage(on_stage, "Nạp giọng đọc AI (vài giây đến nửa phút)")
     tts = tts or default_tts()
@@ -146,7 +164,7 @@ def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_sto
             if should_stop and should_stop():
                 break
             try:
-                r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}", on_stage)
+                r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}", on_stage, clean)
             except Exception as e:  # noqa: BLE001 — lỗi 1 video không được làm hỏng cả batch
                 log.exception("Lỗi khi tạo %s %s", v.lang, v.hook)
                 r = ItemResult(lang=f"{v.lang} {v.hook}", ok=False, error=str(e))

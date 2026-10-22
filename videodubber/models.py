@@ -70,6 +70,8 @@ class Template(BaseModel):
     source_lang: str = "fr"
     captions: list[TimedLine] = Field(default_factory=list)
     cover: Box | None = None
+    # text: chỉ xoá nét chữ cũ, giữ nền glow (tinh tế, tự lùi về box nếu không tách được); box: làm mờ cả khung
+    cover_mode: Literal["text", "box"] = "text"
     style: CaptionStyle = Field(default_factory=CaptionStyle)
     voice: list[TimedLine] = Field(default_factory=list)
     audio_mode: AudioMode = "original"

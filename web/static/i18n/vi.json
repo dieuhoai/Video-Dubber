@@ -27,7 +27,7 @@
   "tpl.time": "Thời điểm xem",
   "tpl.preview": "Xem thử caption mới",
   "tpl.showOriginal": "Xem khung gốc",
-  "tpl.previewHint": "Khung đỏ là vùng caption cũ sẽ bị làm mờ. Bấm “Xem thử” để thấy caption mới ở đúng thời điểm này.",
+  "tpl.previewHint": "Khung đỏ là vùng có chữ cũ. Bấm “Xem thử” để thấy caption mới ở đúng thời điểm này (lần đầu mất 10–20 giây để xoá chữ cũ).",
   "tpl.captions": "Caption trên video",
   "tpl.captionsHint": "Mỗi dòng: giây bắt đầu · giây kết thúc · chữ gốc. Caption 1 là câu hook sẽ được thay theo từng dòng text ở bước 3.",
   "tpl.start": "Bắt đầu (giây)",
@@ -50,7 +50,7 @@
   "style.uppercase": "Viết hoa toàn bộ",
   "style.glowOn": "Có hiệu ứng phát sáng",
   "cover.title": "Vùng che caption cũ",
-  "cover.hint": "Toạ độ theo pixel của video gốc. Vùng này bị làm mờ trong lúc caption hiện.",
+  "cover.hint": "Toạ độ theo pixel của video gốc. Khung này cần trùm hết chữ cũ; với kiểu 'chỉ xoá chữ', phần ngoài nét chữ được giữ nguyên.",
   "cover.x": "Trái (x)",
   "cover.y": "Trên (y)",
   "cover.w": "Rộng",
@@ -111,5 +111,8 @@
   "audio.voiceOffset": "Voice bắt đầu ở giây",
   "audio.hasVoice": "✓ Đã có file voice",
   "audio.noVoice": "Chưa tải file voice",
-  "audio.voiceUploaded": "Đã tải voice lên — nghe thử bên dưới"
+  "audio.voiceUploaded": "Đã tải voice lên — nghe thử bên dưới",
+  "cover.mode": "Cách xoá chữ cũ",
+  "cover.modeText": "Chỉ xoá chữ, giữ nền glow (tinh tế — khuyên dùng)",
+  "cover.modeBox": "Làm mờ cả khung (khi video gốc đứng yên)"
 }

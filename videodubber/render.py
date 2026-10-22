@@ -1,4 +1,4 @@
-"""Ghép hình: làm mờ caption cũ (viền mờ dần), vẽ caption mới (ASS), gắn âm thanh, giữ đúng thời lượng."""
+"""Ghép hình: xoá caption cũ (chỉ nét chữ, hoặc làm mờ cả khung), vẽ caption mới (ASS), gắn âm thanh."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -56,12 +56,20 @@ def _filter_path(p: Path) -> str:
 
 
 def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None, captions: list[TimedLine],
-           audio: Path | None, keep_original_audio: bool, workdir: Path, size: tuple[int, int] | None = None) -> Path:
-    """Xuất MP4 H.264/AAC. Thời lượng luôn = video gốc."""
+           audio: Path | None, keep_original_audio: bool, workdir: Path, size: tuple[int, int] | None = None,
+           clean: tuple[Path, float] | None = None) -> Path:
+    """Xuất MP4 H.264/AAC. Thời lượng luôn = video gốc.
+
+    `clean`: clip đã xoá riêng nét chữ cũ (giữ glow) — dán đúng chỗ, không làm mờ gì thêm.
+    """
     args = ["-i", str(video)]
     parts: list[str] = []
     last = "0:v"
-    if cover and captions:
+    if cover and captions and clean:
+        args += ["-itsoffset", f"{clean[1]:.3f}", "-i", str(clean[0])]
+        parts.append(f"[0:v][1:v]overlay={cover.x}:{cover.y}:eof_action=pass:enable='{_enable(captions)}'[cov]")
+        last = "cov"
+    elif cover and captions:
         mask = feather_mask(cover, workdir / "mask.png")
         args += ["-loop", "1", "-t", f"{duration:.3f}", "-i", str(mask)]
         w, h = size or _frame_size(video)
@@ -85,12 +93,16 @@ def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None
 
 
 def preview_frame(video: Path, t: float, ass: Path, cover: Box | None, out: Path, workdir: Path,
-                  size: tuple[int, int] | None = None) -> Path:
+                  size: tuple[int, int] | None = None, clean: tuple[Path, float] | None = None) -> Path:
     """Ảnh xem trước 1 khung hình với caption mới (ass phải có câu chạy từ 0s) — để chỉnh vị trí/kiểu chữ nhanh."""
     args = ["-ss", f"{max(t, 0):.3f}", "-i", str(video)]
     parts: list[str] = []
     last = "0:v"
-    if cover:
+    if cover and clean and t >= clean[1]:
+        args += ["-ss", f"{t - clean[1]:.3f}", "-i", str(clean[0])]
+        parts.append(f"[0:v][1:v]overlay={cover.x}:{cover.y}:eof_action=pass[cov]")
+        last = "cov"
+    elif cover:
         mask = feather_mask(cover, workdir / "mask.png")
         args += ["-i", str(mask)]
         w, h = size or _frame_size(video)

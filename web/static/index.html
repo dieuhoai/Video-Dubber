@@ -133,6 +133,11 @@
                 <label class="check"><input type="checkbox" x-model="tpl.style.uppercase"><span x-text="t('style.uppercase')"></span></label>
                 <label class="check"><input type="checkbox" x-model="tpl.style.glow"><span x-text="t('style.glowOn')"></span></label>
                 <h4 x-text="t('cover.title')"></h4>
+                <label class="field"><span x-text="t('cover.mode')"></span>
+                  <select class="select" x-model="tpl.cover_mode" data-testid="cover-mode">
+                    <option value="text" x-text="t('cover.modeText')"></option>
+                    <option value="box" x-text="t('cover.modeBox')"></option>
+                  </select></label>
                 <p class="muted small" x-text="t('cover.hint')"></p>
                 <div class="row wrap" x-show="tpl.cover">
                   <template x-for="k in ['x','y','w','h']" :key="k">

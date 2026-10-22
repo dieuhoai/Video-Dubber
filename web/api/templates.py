@@ -15,6 +15,7 @@ from videodubber.io_utils import atomic_write_text
 from videodubber.langs import get_lang
 from videodubber.media import MediaError, extract_frame
 from videodubber.models import Template, TimedLine
+from videodubber.processor import prepare_clean
 from videodubber.render import preview_frame
 
 router = APIRouter(prefix="/api/templates")
@@ -161,8 +162,9 @@ def preview(tid: str, body: dict, tasks: BackgroundTasks) -> FileResponse:
         out = cache / f"preview_{secrets.token_hex(4)}.jpg"  # mỗi người xem 1 file, xoá sau khi gửi
         tasks.add_task(out.unlink, missing_ok=True)
         try:
+            clean = prepare_clean(tpl, store.template_dir(tid))
             preview_frame(store.template_dir(tid) / tpl.video, t, ass, tpl.cover, out, Path(tmp),
-                          size=(tpl.width, tpl.height))
+                          size=(tpl.width, tpl.height), clean=clean)
         except MediaError as e:
             raise HTTPException(500, str(e)) from e
     return FileResponse(out, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
