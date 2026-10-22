@@ -81,3 +81,54 @@ def test_bad_variant_fails_fast(video):
     with pytest.raises(ValueError, match="trùng"):
         v = LangVariant(lang="es", captions=["a"], voice=["a", "b"])
         run_batch(BatchRequest(template_id=tpl.id, variants=[v, v]), tts=BeepTTS())
+
+
+def _tone(path: Path, seconds: float, freq: int = 330) -> Path:
+    ffmpeg("-f", "lavfi", "-i", f"sine=frequency={freq}:duration={seconds}", "-ac", "1", "-ar", "44100", str(path))
+    return path
+
+
+def test_uploaded_voice_keeps_separated_music(video, tmp_path, monkeypatch):
+    import videodubber.processor as P
+
+    # Không có mô hình tách nhạc trong test → thay bằng 1 file "nhạc nền" giả.
+    def fake_separate(vid, out):
+        out.mkdir(parents=True, exist_ok=True)
+        return _tone(out / "music.wav", 6, 110)
+
+    monkeypatch.setattr(P, "separate_music", fake_separate)
+    tpl = _setup(video)
+    store.set_voice_file(tpl.id, _tone(tmp_path / "giọng của tôi.mp3", 4))
+    tpl = store.load_template(tpl.id)
+    assert tpl.audio_mode == "uploaded_voice" and tpl.voice_file and not tpl.uses_voice
+    res = run_batch(BatchRequest(template_id=tpl.id, variants=[
+        LangVariant(lang="en", captions=["Hook A"], hook="h1"),
+        LangVariant(lang="en", captions=["Hook B"], hook="h2")]), tts=BeepTTS())
+    assert res.ok_count == 2, [i.error for i in res.items]
+    it = res.items[0]
+    assert "_en_up_h1_" in it.output.name
+    checks = {c.name: c for c in it.checks}
+    assert checks["Voice tải lên"].ok and checks["Âm lượng"].ok and checks["Thời lượng"].ok, checks
+
+
+def test_uploaded_voice_too_long_is_flagged(video, tmp_path, monkeypatch):
+    import videodubber.processor as P
+
+    monkeypatch.setattr(P, "separate_music", lambda vid, out: None)
+    tpl = _setup(video)
+    store.set_voice_file(tpl.id, _tone(tmp_path / "dai.wav", 9))
+    res = run_batch(BatchRequest(template_id=tpl.id, variants=[LangVariant(lang="en", captions=["Hi"])]),
+                    tts=BeepTTS())
+    it = res.items[0]
+    chk = {c.name: c for c in it.checks}["Voice tải lên"]
+    assert it.ok and not chk.ok and "dài" in chk.detail
+    assert abs(probe(it.output).duration - 6.0) < 0.05  # vẫn đúng thời lượng video, voice bị cắt
+
+
+def test_uploaded_voice_missing_file(video):
+    tpl = _setup(video)
+    tpl.audio_mode = "uploaded_voice"
+    store.save_template(tpl)
+    with pytest.raises(Exception, match="voice"):
+        run_batch(BatchRequest(template_id=tpl.id, variants=[LangVariant(lang="en", captions=["Hi"])]),
+                  tts=BeepTTS())

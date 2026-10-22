@@ -69,7 +69,7 @@ def get(tid: str) -> dict:
 def update(tid: str, body: dict) -> dict:
     old = _load(tid)
     # Các trường do tool đo — không cho sửa từ giao diện.
-    fixed = {k: getattr(old, k) for k in ("id", "video", "width", "height", "duration", "fps", "music")}
+    fixed = {k: getattr(old, k) for k in ("id", "video", "width", "height", "duration", "fps", "music", "voice_file")}
     try:
         tpl = Template.model_validate({**body, **fixed})
     except ValidationError as e:
@@ -119,11 +119,31 @@ def music(tid: str, file: UploadFile = File(...)) -> dict:  # noqa: B008
 
 
 
+@router.post("/{tid}/voicefile")
+def voicefile(tid: str, file: UploadFile = File(...)) -> dict:  # noqa: B008
+    _load(tid)
+    with tempfile.TemporaryDirectory(prefix="vdub_up_") as tmp:
+        src = _save_upload(file, store.AUDIO_EXT, Path(tmp))
+        try:
+            tpl = store.set_voice_file(tid, src)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+    return tpl.model_dump(mode="json")
+
+
+@router.get("/{tid}/voicefile")
+def voicefile_get(tid: str) -> FileResponse:
+    tpl = _load(tid)
+    if not tpl.voice_file or not (store.template_dir(tid) / tpl.voice_file).is_file():
+        raise HTTPException(404, "Chưa có file voice")
+    return FileResponse(store.template_dir(tid) / tpl.voice_file)
+
+
 @router.post("/{tid}/preview")
 def preview(tid: str, body: dict, tasks: BackgroundTasks) -> FileResponse:
     """Xem trước caption mới trên 1 khung hình, dùng kiểu chữ/khung che đang chỉnh (chưa cần lưu)."""
     old = _load(tid)
-    fixed = {k: getattr(old, k) for k in ("id", "video", "width", "height", "duration", "fps", "music")}
+    fixed = {k: getattr(old, k) for k in ("id", "video", "width", "height", "duration", "fps", "music", "voice_file")}
     try:
         tpl = Template.model_validate({**(body.get("template") or old.model_dump()), **fixed})
         lang = get_lang(str(body.get("lang") or "fr"))

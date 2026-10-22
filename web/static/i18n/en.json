@@ -104,5 +104,12 @@
   "status.stopped": "Stopped",
   "status.error": "Error",
   "tpl.needCaption": "Add at least one caption with text: click “+ Add caption” and enter start, end and the original on-screen text.",
-  "res.log": "View log (send to support if the tool errors or hangs)"
+  "res.log": "View log (send to support if the tool errors or hangs)",
+  "audio.uploaded_voice": "Separate music + uploaded voice",
+  "audio.uploaded_voiceHint": "Remove original voice, keep music, use your voice file",
+  "audio.voiceFile": "Voice file (MP3/WAV/M4A) — shared by all videos",
+  "audio.voiceOffset": "Voice starts at second",
+  "audio.hasVoice": "✓ Voice file uploaded",
+  "audio.noVoice": "No voice file yet",
+  "audio.voiceUploaded": "Voice uploaded — preview below"
 }

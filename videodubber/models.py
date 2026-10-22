@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 SLUG = re.compile(r"^[A-Za-z0-9-]{1,40}$")
-AudioMode = Literal["original", "music_file", "separate", "none"]
+AudioMode = Literal["original", "music_file", "separate", "uploaded_voice", "none"]
 
 
 class Box(BaseModel):
@@ -74,6 +74,8 @@ class Template(BaseModel):
     voice: list[TimedLine] = Field(default_factory=list)
     audio_mode: AudioMode = "original"
     music: str | None = None
+    voice_file: str | None = None  # voice tự thu/tạo sẵn (chế độ uploaded_voice), dùng chung cho mọi video
+    voice_offset: float = Field(0.2, ge=0)
     glossary: list[str] = Field(default_factory=list)
 
     @field_validator("app", "concept")
@@ -93,7 +95,8 @@ class Template(BaseModel):
 
     @property
     def uses_voice(self) -> bool:
-        return self.audio_mode != "original" and bool(self.voice)
+        """Có dùng giọng đọc AI theo từng câu không (chế độ voice tải lên thì không)."""
+        return self.audio_mode in ("separate", "music_file", "none") and bool(self.voice)
 
 
 class LangVariant(BaseModel):

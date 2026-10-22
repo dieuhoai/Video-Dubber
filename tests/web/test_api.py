@@ -62,7 +62,10 @@ def test_path_traversal_blocked(client):
 
 
 @needs_ffmpeg
-def test_upload_edit_preview_and_run(client, video_bytes):
+def test_upload_edit_preview_and_run(client, video_bytes, tmp_path):
+    wav = tmp_path / "v.wav"
+    ffmpeg("-f", "lavfi", "-i", "sine=duration=1", str(wav))
+    wav_bytes = wav.read_bytes()
     files = {"video": ("Video gốc.mp4", video_bytes, "video/mp4")}
     r = client.post("/api/templates", files=files, data={"name": "Thử"})
     assert r.status_code == 200, r.text
@@ -76,6 +79,16 @@ def test_upload_edit_preview_and_run(client, video_bytes):
     assert saved["width"] == 360 and saved["captions"][0]["text"] == "Bonjour"
     bad = dict(tpl, captions=[{"start": 2, "end": 1, "text": "x"}])
     assert client.put(f"/api/templates/{tpl['id']}", json=bad).status_code == 422
+
+    assert client.get(f"/api/templates/{tpl['id']}/voicefile").status_code == 404
+    up = client.post(f"/api/templates/{tpl['id']}/voicefile", files={"file": ("giọng.wav", wav_bytes, "audio/wav")})
+    assert up.status_code == 200 and up.json()["audio_mode"] == "uploaded_voice", up.text
+    assert client.get(f"/api/templates/{tpl['id']}/voicefile").status_code == 200
+    assert client.post(f"/api/templates/{tpl['id']}/voicefile", files={"file": ("x.txt", b"x")}).status_code == 422
+    body = {**saved, "voice_file": None, "audio_mode": "original"}
+    kept = client.put(f"/api/templates/{tpl['id']}", json=body).json()
+    assert kept["voice_file"] == up.json()["voice_file"]  # file voice không bị xoá do giao diện gửi thiếu
+    tpl = kept
 
     assert client.get(f"/api/templates/{tpl['id']}/frame?t=1").headers["content-type"] == "image/jpeg"
     pv = client.post(f"/api/templates/{tpl['id']}/preview", json={"text": "¿Ya probaste?", "t": 1, "lang": "es"})

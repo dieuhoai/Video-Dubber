@@ -144,10 +144,10 @@
 
               <h3 x-text="t('tpl.audio')"></h3>
               <div class="radio-group" role="radiogroup" :aria-label="t('tpl.audio')">
-                <template x-for="m in ['original','separate','music_file','none']" :key="m">
-                  <label class="radio" :class="{ disabled: m === 'separate' && !caps.separate }">
+                <template x-for="m in ['original','separate','uploaded_voice','music_file','none']" :key="m">
+                  <label class="radio" :class="{ disabled: needsSep(m) && !caps.separate }">
                     <input type="radio" name="audio_mode" :value="m" x-model="tpl.audio_mode" :data-testid="'audio-' + m"
-                           :disabled="m === 'separate' && !caps.separate">
+                           :disabled="needsSep(m) && !caps.separate">
                     <span><b x-text="t('audio.' + m)"></b><br><small class="muted" x-text="t('audio.' + m + 'Hint')"></small></span>
                   </label>
                 </template>
@@ -157,7 +157,20 @@
                 <span class="muted small" x-text="tpl.music ? t('audio.hasMusic') : t('audio.noMusic')"></span>
               </div>
 
-              <div x-show="tpl.audio_mode !== 'original'">
+              <div x-show="tpl.audio_mode === 'uploaded_voice'" class="upload-voice">
+                <label class="field"><span x-text="t('audio.voiceFile')"></span>
+                  <input class="input file" type="file" accept="audio/*,.mp3,.wav,.m4a" data-testid="voice-file"
+                         @change="uploadVoice($event.target.files[0])"></label>
+                <div class="row wrap">
+                  <label class="field"><span x-text="t('audio.voiceOffset')"></span>
+                    <input class="input num" type="number" step="0.05" min="0" x-model.number="tpl.voice_offset"></label>
+                  <span class="small" data-testid="voice-status" :class="tpl.voice_file ? 'ok-text' : 'warn'"
+                        x-text="tpl.voice_file ? t('audio.hasVoice') : t('audio.noVoice')"></span>
+                </div>
+                <audio x-show="tpl.voice_file" controls preload="none" :src="tpl.voice_file ? `/api/templates/${tpl.id}/voicefile?v=${voiceVer}` : ''"></audio>
+              </div>
+
+              <div x-show="['separate','music_file','none'].includes(tpl.audio_mode)">
                 <h3 x-text="t('tpl.voice')"></h3>
                 <p class="muted small" x-text="t('tpl.voiceHint')"></p>
                 <template x-for="(c, i) in tpl.voice" :key="i">

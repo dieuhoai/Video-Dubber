@@ -103,6 +103,20 @@ def set_music(tid: str, src: Path) -> Template:
     return save_template(tpl)
 
 
+def set_voice_file(tid: str, src: Path) -> Template:
+    """Lưu file voice người dùng tự tải lên; nhạc nền vẫn lấy từ video gốc (tách giọng gốc ra)."""
+    ext = src.suffix.lower()
+    if ext not in AUDIO_EXT:
+        raise ValueError(f"File voice {ext} chưa hỗ trợ — dùng MP3/WAV/M4A.")
+    tpl = load_template(tid)
+    for old in template_dir(tid).glob("voiceover.*"):
+        old.unlink()
+    shutil.copy2(src, template_dir(tid) / f"voiceover{ext}")
+    tpl.voice_file = f"voiceover{ext}"
+    tpl.audio_mode = "uploaded_voice"
+    return save_template(tpl)
+
+
 def new_batch(template: Template) -> tuple[str, Path]:
     bid = datetime.now().strftime("%Y%m%d%H%M%S") + new_id()[:6]
     d = batch_dir(bid)

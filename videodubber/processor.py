@@ -17,8 +17,8 @@ from .audio import Fit, fit_clip, mix, separate_music, slots
 from .captions import build_ass
 from .io_utils import atomic_write_text
 from .langs import get_lang
-from .media import MediaError
-from .models import BatchRequest, ItemResult, JobResult, LangVariant, Template
+from .media import MediaError, audio_duration, ffmpeg
+from .models import BatchRequest, ItemResult, JobResult, LangVariant, QACheck, Template
 from .qa import check_duration, check_glossary, check_glyphs, check_layout, check_loudness, check_voice
 from .render import render
 from .tts import TTS, default_tts
@@ -36,7 +36,7 @@ def _stage(cb: Stage | None, text: str) -> None:
 
 
 def output_name(tpl: Template, v: LangVariant, version: int, ratio: str = "9x16") -> str:
-    voice = f"{v.gender}1" if tpl.uses_voice else "orig"
+    voice = f"{v.gender}1" if tpl.uses_voice else ("up" if tpl.audio_mode == "uploaded_voice" else "orig")
     lang = re.sub(r"[^a-z0-9]", "", v.lang.lower())
     return f"{tpl.app}_{tpl.concept}_{lang}_{voice}_{v.hook}_{ratio}_v{version}.mp4"
 
@@ -60,7 +60,9 @@ def prepare_music(tpl: Template, tdir: Path) -> Path | None:
         if not tpl.music or not (tdir / tpl.music).is_file():
             raise MediaError("Chưa có file nhạc nền — tải nhạc lên ở bước Template.")
         return tdir / tpl.music
-    if tpl.audio_mode == "separate":
+    if tpl.audio_mode == "uploaded_voice" and (not tpl.voice_file or not (tdir / tpl.voice_file).is_file()):
+        raise MediaError("Chưa tải file voice lên — chọn file ở bước 1, mục Âm thanh.")
+    if tpl.audio_mode in ("separate", "uploaded_voice"):
         cached = tdir / "stems" / "music.wav"
         return cached if cached.is_file() else separate_music(tdir / tpl.video, tdir / "stems")
     return None
@@ -76,6 +78,7 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
 
     fits: list[Fit] = []
     audio = None
+    upload_check: QACheck | None = None
     if tpl.uses_voice:
         sl = slots([x.start for x in tpl.voice], [x.end for x in tpl.voice], tpl.duration)
         clips = []
@@ -87,6 +90,19 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
             clips.append((work / f"fit_{i}.wav", line.start))
         _stage(on_stage, f"{v.lang} {v.hook}: trộn giọng + nhạc")
         audio = mix(clips, music, tpl.duration, work / "mix.wav")
+    elif tpl.audio_mode == "uploaded_voice":
+        _stage(on_stage, f"{v.lang} {v.hook}: ghép voice tải lên + nhạc nền")
+        slot = max(tpl.duration - tpl.voice_offset, 0.1)
+        nat = audio_duration(tdir / tpl.voice_file)
+        clip = work / "voice_up.wav"
+        # Không tua nhanh giọng người dùng: dài quá thì cắt ở cuối video (fade 60 ms) và báo đỏ.
+        ffmpeg("-i", str(tdir / tpl.voice_file), "-af",
+               f"atrim=0:{slot:.3f},afade=t=out:st={max(slot - 0.06, 0):.3f}:d=0.06", "-ac", "1", "-ar", "44100",
+               str(clip), timeout=120)
+        upload_check = QACheck(name="Voice tải lên", ok=nat <= slot + 0.05,
+                               detail=(f"{nat:.1f}s, vừa video" if nat <= slot + 0.05 else
+                                       f"Voice dài {nat:.1f}s, video chỉ còn {slot:.1f}s — phần cuối bị cắt"))
+        audio = mix([(clip, tpl.voice_offset)], music, tpl.duration, work / "mix.wav")
     elif tpl.audio_mode == "music_file" or tpl.audio_mode == "separate":
         audio = mix([], music, tpl.duration, work / "mix.wav")
 
@@ -102,6 +118,8 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
         check_loudness(out, remixed=audio is not None),
         check_glossary(tpl.glossary, [x.text for x in tpl.captions + tpl.voice], v.captions + v.voice),
     ]
+    if upload_check:
+        checks.insert(3, upload_check)
     return ItemResult(lang=f"{v.lang} {v.hook}", output=out, ok=True, checks=checks)
 
 
@@ -116,7 +134,7 @@ def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_sto
     if len(set(names)) != len(names):
         raise ValueError("Có 2 biến thể trùng ngôn ngữ + giọng + mã hook — đổi mã hook (h1, h2…) cho khác nhau.")
     bid, bdir = batch or store.new_batch(tpl)
-    if tpl.audio_mode == "separate" and not (tdir / "stems" / "music.wav").is_file():
+    if tpl.audio_mode in ("separate", "uploaded_voice") and not (tdir / "stems" / "music.wav").is_file():
         _stage(on_stage, "Tách nhạc nền khỏi giọng gốc (chỉ lần đầu, 15–90 giây)")
     music = prepare_music(tpl, tdir)
     if tpl.uses_voice:

@@ -19,7 +19,7 @@ Nguồn: brief "Tool nhân bản video quảng cáo đa ngôn ngữ (text + voic
 - Xoá caption cũ: delogo tô lại toàn bộ vùng khung từ điểm ảnh viền ngoài, làm mờ nhẹ, mép trên/dưới mờ dần — chỉ trong thời gian caption hiện.
 - Caption mới: ASS/libass, font Fredoka Bold (OFL, đóng kèm) + fallback Noto; chữ trắng viền đen, glow xanh ngọc; tự xuống dòng,
   tự giảm cỡ chữ để không quá `max_lines` dòng.
-- Âm thanh: `original` (giữ nguyên, chỉ đổi chữ) · `music_file` · `separate` (tách nhạc bằng MDX-Net ONNX, chạy CPU) · `none`.
+- Âm thanh: `original` (giữ nguyên, chỉ đổi chữ) · `music_file` · `uploaded_voice` (tách nhạc + file voice người dùng tải lên, không tua nhanh) · `separate` (tách nhạc bằng MDX-Net ONNX, chạy CPU) · `none`.
   Có voice: TTS từng câu, khớp thời lượng bằng `atempo` 0,9–1,15×, đặt đúng mốc; nhạc ducking dưới voice; loudnorm −14 LUFS.
 - Đầu ra: MP4 H.264/AAC, giữ đúng thời lượng & kích thước gốc. Tên `{app}_{concept}_{lang}_{voice}_{hook}_{ratio}_v{n}.mp4`.
 

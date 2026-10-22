@@ -91,6 +91,8 @@ def test_qa_helpers():
     assert check_voice([]).ok
     assert not check_glossary(["Bday AI"], ["Try Bday AI"], ["Prueba la app"]).ok
     assert check_glossary(["Bday AI"], ["Try Bday AI"], ["Prueba Bday AI"]).ok
+    # "ai" nằm trong "maintenant" không được tính là có từ "AI" (so khớp theo nguyên từ)
+    assert check_glossary(["AI"], ["Essaie maintenant !"], ["One selfie. Pure magic."]).ok
 
 
 def test_lang_catalog():

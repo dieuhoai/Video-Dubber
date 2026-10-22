@@ -1,6 +1,7 @@
 """Kiểm tra tự động cho mỗi video ra. Mỗi check là một câu người dùng hiểu được."""
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import unicodedata
@@ -84,8 +85,12 @@ def check_loudness(out: Path, remixed: bool) -> QACheck:
 
 def check_glossary(glossary: list[str], source: list[str], target: list[str]) -> QACheck:
     """Từ không dịch (tên app, tính năng): có trong bản gốc thì bản dịch cũng phải có."""
-    src, dst = " ".join(source).casefold(), " ".join(target).casefold()
-    lost = [g for g in glossary if g.strip() and g.casefold() in src and g.casefold() not in dst]
+    src, dst = " ".join(source), " ".join(target)
+
+    def has(term: str, text: str) -> bool:  # so khớp nguyên từ: "AI" không khớp chữ "ai" trong "maintenant"
+        return re.search(rf"(?<!\w){re.escape(term.strip())}(?!\w)", text, re.IGNORECASE) is not None
+
+    lost = [g for g in glossary if g.strip() and has(g, src) and not has(g, dst)]
     if lost:
         return QACheck(name="Glossary", ok=False, detail=f"Bản dịch làm mất: {', '.join(lost)}")
     return QACheck(name="Glossary", ok=True, detail=f"{len(glossary)} từ" if glossary else "chưa khai báo")

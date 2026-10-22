@@ -104,5 +104,12 @@
   "status.stopped": "Đã dừng",
   "status.error": "Lỗi",
   "tpl.needCaption": "Cần ít nhất 1 caption có chữ: bấm “+ Thêm caption”, nhập giây bắt đầu, giây kết thúc và câu gốc trên video.",
-  "res.log": "Xem nhật ký (gửi cho kỹ thuật khi tool lỗi hoặc bị kẹt)"
+  "res.log": "Xem nhật ký (gửi cho kỹ thuật khi tool lỗi hoặc bị kẹt)",
+  "audio.uploaded_voice": "Tách nhạc + voice tải lên",
+  "audio.uploaded_voiceHint": "Bỏ giọng gốc, giữ nhạc nền, dùng file voice của bạn",
+  "audio.voiceFile": "File voice (MP3/WAV/M4A) — dùng chung cho mọi video",
+  "audio.voiceOffset": "Voice bắt đầu ở giây",
+  "audio.hasVoice": "✓ Đã có file voice",
+  "audio.noVoice": "Chưa tải file voice",
+  "audio.voiceUploaded": "Đã tải voice lên — nghe thử bên dưới"
 }

@@ -44,7 +44,7 @@ function app() {
     tpl: null,
     frameT: 1, previewUrl: "", showPreview: false, previewBusy: false,
     picked: [], gender: "f",
-    tr: {}, hooksPerLang: 3, pasteReply: "",
+    tr: {}, hooksPerLang: 3, pasteReply: "", voiceVer: 0,
     job: { status: "idle", done: 0, total: 0, items: [] },
 
     async init() {
@@ -79,7 +79,10 @@ function app() {
     },
 
     // ---------- điều hướng ----------
-    get usesVoice() { return !!this.tpl && this.tpl.audio_mode !== "original" && this.tpl.voice.length > 0; },
+    get usesVoice() {
+      return !!this.tpl && ["separate", "music_file", "none"].includes(this.tpl.audio_mode) && this.tpl.voice.length > 0;
+    },
+    needsSep(m) { return m === "separate" || m === "uploaded_voice"; },
     canGo(s) {
       if (s === 1) return true;
       if (s === 2) return !!this.tpl && this.tpl.captions.length > 0;
@@ -151,6 +154,16 @@ function app() {
         this.notice = this.t("common.saved");
         this.ensureTr();
         if (next) this.go(next);
+      } catch (e) { this.error = e.message; }
+    },
+    async uploadVoice(file) {
+      if (!file) return;
+      this.error = "";
+      try {
+        const f = new FormData(); f.append("file", file);
+        const saved = await upload(`/api/templates/${this.tpl.id}/voicefile`, f);
+        this.tpl.voice_file = saved.voice_file; this.tpl.audio_mode = "uploaded_voice"; this.voiceVer++;
+        this.notice = this.t("audio.voiceUploaded");
       } catch (e) { this.error = e.message; }
     },
     async uploadMusic(file) {

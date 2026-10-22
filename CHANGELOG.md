@@ -3,7 +3,10 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Thêm
+- Chế độ âm thanh "Tách nhạc + voice tải lên": tải file voice của bạn (MP3/WAV/M4A), tool bỏ giọng gốc, giữ nhạc nền đã tách, đặt voice từ giây bạn chọn; voice dài hơn video thì báo đỏ.
 ### Sửa
+- Kiểm tra "Glossary" so khớp nguyên từ (trước đây chữ "ai" trong "maintenant" bị tính là "AI").
 - Màn hình Kết quả ghi rõ tool đang làm bước nào (tách nhạc, tạo giọng câu 2/4, xuất video…); có link "Xem nhật ký" để gửi khi bị lỗi/kẹt (bản Mac chạy ngầm, không có cửa sổ đen).
 - Video mới tải lên có sẵn 1 dòng caption để điền; nút Tiếp tục bị khoá thì có dòng giải thích cần làm gì.
 - Caption mới ngắn hơn caption gốc không còn lộ chữ cũ ở 2 bên: vùng chữ cũ được xoá sạch (tô lại từ nền xung quanh) thay vì chỉ làm mờ.

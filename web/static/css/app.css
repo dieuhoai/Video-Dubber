@@ -86,3 +86,6 @@ details > summary { cursor: pointer; min-height: 40px; display: flex; align-item
 @media (max-width: 560px) { .topbar { padding: var(--space-3) var(--space-4); } .card { padding: var(--space-4); }
   .line-row { flex-wrap: wrap; } .line-row .grow { flex-basis: 100%; order: 3; } .input.num { width: 84px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.upload-voice { margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: 8px; }
+.upload-voice audio { width: 100%; margin-top: var(--space-2); }
+.ok-text { color: var(--ok); }
