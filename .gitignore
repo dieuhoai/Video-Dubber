@@ -59,3 +59,7 @@ Thumbs.db
 desktop.ini
 *.log
 *.tmp
+
+# ===== Mô hình AI (tải bằng scripts/get_models.py) =====
+models/*
+!models/.gitkeep

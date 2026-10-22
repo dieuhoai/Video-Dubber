@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "video-dubber"
 version = "0.1.0"
-description = "Video Dubber — công cụ desktop chạy local (CLI + Web UI)"
+description = "Video Dubber — nhân bản video quảng cáo đa ngôn ngữ (caption + voice)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -13,6 +13,13 @@ dependencies = [
   "pydantic>=2.6",
   "fastapi>=0.110",
   "uvicorn[standard]>=0.27",
+  "python-multipart>=0.0.9",  # upload video/nhạc từ trình duyệt
+  "fonttools>=4.50",          # đo độ rộng chữ để tự xuống dòng caption
+  "numpy>=1.26",
+  "soundfile>=0.12",
+  "onnxruntime>=1.17",        # chạy mô hình tách nhạc + giọng đọc offline, không cần PyTorch
+  "edge-tts>=6.1",            # giọng Microsoft miễn phí (cần mạng)
+  "kokoro-onnx>=0.4",         # giọng AI offline
 ]
 
 [project.optional-dependencies]

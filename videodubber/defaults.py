@@ -20,7 +20,7 @@ def _user_dir() -> Path:
 
 USER_DIR = _user_dir()
 SETTINGS_FILE = USER_DIR / "settings.json"
-USER_PRESET_DIR = USER_DIR / "presets"
+DATA_DIR = Path(os.environ["VIDEODUBBER_DATA"]) if os.environ.get("VIDEODUBBER_DATA") else USER_DIR / "data"
 
 
 def resource_root() -> Path:
@@ -28,4 +28,8 @@ def resource_root() -> Path:
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
 
 
-BUILTIN_PRESET_DIR = resource_root() / "presets"
+
+def models_dir() -> Path:
+    """Mô hình AI (tách nhạc, giọng đọc offline) — nặng nên không nằm trong git; tải bằng scripts/get_models.py."""
+    env = os.environ.get("VIDEODUBBER_MODELS")
+    return Path(env) if env else resource_root() / "models"
