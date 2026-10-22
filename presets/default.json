@@ -1,0 +1,5 @@
+{
+  "name": "default",
+  "extensions": [".txt", ".md"],
+  "uppercase": false
+}

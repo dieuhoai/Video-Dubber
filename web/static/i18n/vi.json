@@ -1,0 +1,19 @@
+{
+  "app.title": "Video Dubber",
+  "settings.language": "Ngôn ngữ",
+  "settings.theme": "Đổi giao diện sáng/tối",
+  "common.browse": "Chọn…",
+  "job.title": "Thiết lập",
+  "job.input": "Thư mục đầu vào",
+  "job.output": "Thư mục kết quả",
+  "job.preset": "Preset",
+  "job.pathHint": "Dán đường dẫn hoặc bấm Chọn…",
+  "job.run": "Chạy",
+  "job.stop": "Dừng",
+  "job.progress": "Tiến độ",
+  "status.idle": "Sẵn sàng",
+  "status.running": "Đang chạy",
+  "status.done": "Hoàn tất",
+  "status.stopped": "Đã dừng",
+  "status.error": "Lỗi"
+}

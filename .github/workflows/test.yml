@@ -1,0 +1,40 @@
+name: test
+on:
+  push:
+  pull_request:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff
+      - name: Ruff
+        run: ruff check .
+      - name: Quyền riêng tư
+        run: python scripts/check_privacy.py --all
+  test:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Cài thư viện
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Cài Chromium cho test UI
+        run: python -m playwright install --with-deps chromium
+      - name: Chạy test
+        run: python -m pytest -q
+        env:
+          PYTHONIOENCODING: utf-8

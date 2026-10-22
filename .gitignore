@@ -1,0 +1,61 @@
+# ===== Dữ liệu khách / media (KHÔNG BAO GIỜ commit) =====
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.m4a
+*.psd
+*.xlsx
+*.csv
+Output/
+real_data/
+.privacy-blocklist
+
+# ===== Bí mật =====
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# ===== Tool ngoài đóng kèm (tải bằng script) =====
+bin/*
+!bin/.gitkeep
+
+# ===== Build / đóng gói =====
+dist/
+build/out/
+*.exe
+*.dll
+*.zip
+*.dmg
+*.pkg
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+htmlcov/
+test-results/
+
+# ===== Claude Code: commit rules/skills/settings.json, bỏ phần cá nhân =====
+.claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
+
+# ===== Máy cá nhân / IDE =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.tmp

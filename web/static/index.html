@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video Dubber</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/app.js"></script>
+  <script defer src="/static/vendor/alpine.min.js"></script>
+</head>
+<body>
+<div class="shell" x-data="app()" x-init="init()" x-cloak>
+  <header class="topbar">
+    <h1 class="brand" x-text="t('app.title')"></h1>
+    <div class="topbar-actions">
+      <select class="select" x-model="lang" @change="setLang(lang)" :aria-label="t('settings.language')">
+        <option value="vi">Tiếng Việt</option>
+        <option value="en">English</option>
+      </select>
+      <button class="btn btn-ghost" type="button" @click="toggleTheme()" :aria-label="t('settings.theme')"
+              x-text="theme === 'dark' ? '☾' : '☀'"></button>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="card" aria-labelledby="sec-input">
+      <h2 id="sec-input" x-text="t('job.title')"></h2>
+
+      <label class="field">
+        <span x-text="t('job.input')"></span>
+        <div class="row">
+          <input class="input" data-testid="input-dir" :aria-label="t('job.input')" x-model.trim="form.input_dir" :placeholder="t('job.pathHint')">
+          <button class="btn" type="button" @click="pick('input_dir')" x-text="t('common.browse')"></button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span x-text="t('job.output')"></span>
+        <div class="row">
+          <input class="input" data-testid="output-dir" :aria-label="t('job.output')" x-model.trim="form.output_dir" :placeholder="t('job.pathHint')">
+          <button class="btn" type="button" @click="pick('output_dir')" x-text="t('common.browse')"></button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span x-text="t('job.preset')"></span>
+        <select class="select" data-testid="preset" x-model="form.preset">
+          <template x-for="n in presets" :key="n"><option :value="n" x-text="n"></option></template>
+        </select>
+      </label>
+
+      <p class="error" role="alert" x-show="error" x-text="error"></p>
+
+      <div class="row">
+        <button class="btn btn-primary" type="button" data-testid="run" @click="run()"
+                :disabled="job.status === 'running' || !canRun" x-text="t('job.run')"></button>
+        <button class="btn" type="button" @click="stop()" x-show="job.status === 'running'"
+                x-text="t('job.stop')"></button>
+      </div>
+    </section>
+
+    <section class="card" aria-live="polite" x-show="job.status !== 'idle'">
+      <h2 x-text="t('job.progress')"></h2>
+      <progress class="progress" :max="job.total || 1" :value="job.done"></progress>
+      <p data-testid="status">
+        <span x-text="t('status.' + job.status)"></span>
+        <span x-show="job.total" x-text="`— ${job.done}/${job.total}`"></span>
+      </p>
+      <ul class="failed" x-show="(job.failed || []).length">
+        <template x-for="f in job.failed" :key="f.source"><li x-text="`${f.source}: ${f.error}`"></li></template>
+      </ul>
+    </section>
+  </main>
+</div>
+</body>
+</html>

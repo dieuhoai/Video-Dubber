@@ -1,0 +1,19 @@
+{
+  "app.title": "Video Dubber",
+  "settings.language": "Language",
+  "settings.theme": "Toggle light/dark",
+  "common.browse": "Browse…",
+  "job.title": "Setup",
+  "job.input": "Input folder",
+  "job.output": "Output folder",
+  "job.preset": "Preset",
+  "job.pathHint": "Paste a path or click Browse…",
+  "job.run": "Run",
+  "job.stop": "Stop",
+  "job.progress": "Progress",
+  "status.idle": "Ready",
+  "status.running": "Running",
+  "status.done": "Done",
+  "status.stopped": "Stopped",
+  "status.error": "Error"
+}
