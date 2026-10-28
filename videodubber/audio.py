@@ -54,12 +54,15 @@ SEPARATION_MODEL = "UVR-MDX-NET-Inst_HQ_3.onnx"
 
 def separate_music(video: Path, out_dir: Path) -> Path:
     """Tách nhạc nền khỏi giọng gốc (MDX-Net ONNX). Chạy 1 lần cho mỗi template, kết quả được cache."""
-    from .defaults import models_dir
+    from .modelstore import find_model
     from .separate import extract_stereo, separate_instrumental
 
     out_dir.mkdir(parents=True, exist_ok=True)
     mixed = extract_stereo(video, out_dir / "mix.wav")
-    return separate_instrumental(models_dir() / SEPARATION_MODEL, mixed, out_dir / "music.wav")
+    model = find_model(SEPARATION_MODEL)
+    if model is None:
+        raise MediaError("Chưa có mô hình tách nhạc — bấm “Tải mô hình AI” ở bước 1 (khoảng 420 MB, chỉ 1 lần).")
+    return separate_instrumental(model, mixed, out_dir / "music.wav")
 
 
 def normalize(src: Path, out: Path, target: float = TARGET_LUFS) -> Path:

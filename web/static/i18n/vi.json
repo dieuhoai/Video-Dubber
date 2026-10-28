@@ -138,5 +138,8 @@
   "draft.confirmReset": "Xoá hết chữ, ngôn ngữ và bản dịch đang làm để bắt đầu lại? Video đã tải vẫn còn trong danh sách “Video đã có”.",
   "draft.wasReset": "Đã reset — bắt đầu lại từ đầu",
   "draft.restored": "Đã mở lại phần đang làm dở",
-  "draft.saveFail": "Chưa lưu được bản nháp:"
+  "draft.saveFail": "Chưa lưu được bản nháp:",
+  "models.need": "Hai chế độ “Tách nhạc…” cần mô hình AI tách nhạc + giọng đọc offline (khoảng 420 MB, tải 1 lần, cần Internet). Bản đang chạy chưa có mô hình này.",
+  "models.download": "Tải mô hình AI",
+  "models.progress": "Đang tải {name}: {done}/{total} MB — để tool mở, xong sẽ tự mở khoá."
 }

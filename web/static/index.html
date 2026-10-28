@@ -223,6 +223,15 @@
                   </label>
                 </template>
               </div>
+              <div class="model-box" x-show="!caps.separate || caps.download?.running" data-testid="model-box" role="status">
+                <p class="small" x-show="!caps.download?.running && !caps.download?.error" x-text="t('models.need')"></p>
+                <p class="small" x-show="caps.download?.running" x-text="modelProgress()"></p>
+                <p class="error small" x-show="caps.download?.error" x-text="caps.download?.error"></p>
+                <progress class="progress" x-show="caps.download?.running" :max="caps.download?.total || 1"
+                          :value="caps.download?.done || 0"></progress>
+                <button class="btn" type="button" data-testid="download-models" @click="downloadModels()"
+                        :disabled="caps.download?.running" x-text="t('models.download')"></button>
+              </div>
               <div x-show="tpl.audio_mode === 'music_file'" class="row wrap">
                 <input class="input file grow" type="file" accept="audio/*" @change="uploadMusic($event.target.files[0])">
                 <span class="muted small" x-text="tpl.music ? t('audio.hasMusic') : t('audio.noMusic')"></span>

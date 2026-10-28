@@ -68,12 +68,12 @@ class KokoroTTS:
 
     @classmethod
     def available(cls) -> bool:
-        from .defaults import models_dir
+        from .modelstore import find_model
         try:
             import kokoro_onnx  # noqa: F401
         except ImportError:
             return False
-        return (models_dir() / cls.MODEL).is_file() and (models_dir() / cls.VOICES).is_file()
+        return find_model(cls.MODEL) is not None and find_model(cls.VOICES) is not None
 
     def synth(self, text: str, lang: Lang, gender: str, out: Path) -> Path:
         if not lang.kokoro:
@@ -81,9 +81,9 @@ class KokoroTTS:
         import soundfile as sf
         from kokoro_onnx import Kokoro
 
-        from .defaults import models_dir
+        from .modelstore import find_model
         if KokoroTTS._engine is None:
-            KokoroTTS._engine = Kokoro(str(models_dir() / self.MODEL), str(models_dir() / self.VOICES))
+            KokoroTTS._engine = Kokoro(str(find_model(self.MODEL)), str(find_model(self.VOICES)))
         code, vf, vm = lang.kokoro
         samples, sr = KokoroTTS._engine.create(text, voice=vm if gender == "m" else vf, speed=1.0, lang=code)
         raw = out.with_suffix(".raw.wav")

@@ -83,9 +83,29 @@ function app() {
       await this.restoreDraft();
       this.$watch("draftJson", () => this.queueDraft());
       this.connect();
+      if (this.caps.download?.running) this.pollModels();
     },
 
     t(key) { return this.dict[key] ?? key; },
+
+    // ---------- mô hình AI: thiếu thì cho tải ngay trên giao diện ----------
+    async downloadModels() {
+      this.error = "";
+      try {
+        await api("/api/models/download", { method: "POST" });
+        this.pollModels();
+      } catch (e) { this.error = e.message; }
+    },
+    async pollModels() {
+      try { this.caps = await api("/api/capabilities"); } catch { /* thử lại ở vòng sau */ }
+      if (this.caps.download?.running) setTimeout(() => this.pollModels(), 1500);
+    },
+    modelProgress() {
+      const d = this.caps.download || {};
+      const mb = (x) => (x / 1048576).toFixed(0);
+      return this.t("models.progress").replace("{name}", d.name || "…")
+        .replace("{done}", mb(d.done || 0)).replace("{total}", d.total ? mb(d.total) : "?");
+    },
 
     // ---------- bản nháp: chỉ mất khi bấm Reset ----------
     get draftJson() {

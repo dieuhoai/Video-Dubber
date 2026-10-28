@@ -48,7 +48,8 @@ def test_index_has_csp(client):
 def test_meta(client):
     codes = [x["code"] for x in client.get("/api/langs").json()["items"]]
     assert "es" in codes and "ja" in codes
-    assert set(client.get("/api/capabilities").json()) == {"offline_voice", "separate", "translate_api"}
+    assert {"offline_voice", "separate", "translate_api", "missing_models", "download"} <= set(
+        client.get("/api/capabilities").json())
 
 
 def test_log_endpoint(client):
@@ -158,3 +159,24 @@ def test_draft_api(client):
     assert client.put("/api/drafts/bad..id", json={}).status_code == 404
     assert client.delete(f"/api/drafts/{did}").status_code == 200
     assert client.get(f"/api/drafts/{did}").json() == {}
+
+
+def test_models_download_unlocks_separation(client, tmp_path, monkeypatch):
+    from videodubber import defaults as D
+    from videodubber import modelstore
+
+    monkeypatch.delenv("VIDEODUBBER_MODELS", raising=False)
+    monkeypatch.setattr(D, "resource_root", lambda: tmp_path / "app")
+    src = tmp_path / "fake.onnx"
+    src.write_bytes(b"x" * 1000)
+    monkeypatch.setattr(modelstore, "FILES", {modelstore.SEPARATION: src.as_uri()})
+    caps = client.get("/api/capabilities").json()
+    assert caps["separate"] is False and caps["missing_models"] == [modelstore.SEPARATION]
+    assert client.post("/api/models/download").json()["started"] is True
+    for _ in range(100):
+        caps = client.get("/api/capabilities").json()
+        if not caps["download"]["running"]:
+            break
+        time.sleep(0.05)
+    assert caps["separate"] is True and caps["missing_models"] == [] and caps["download"]["error"] is None
+    assert client.post("/api/models/download").json()["started"] is False

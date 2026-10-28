@@ -138,5 +138,8 @@
   "draft.confirmReset": "Clear the current text, languages and translations and start over? Uploaded videos stay in the “Existing videos” list.",
   "draft.wasReset": "Reset — starting over",
   "draft.restored": "Restored your unfinished work",
-  "draft.saveFail": "Couldn't save the draft:"
+  "draft.saveFail": "Couldn't save the draft:",
+  "models.need": "The “Separate music…” modes need the AI separation + offline voice models (~420 MB, one-time download, needs Internet). This copy doesn't have them yet.",
+  "models.download": "Download AI models",
+  "models.progress": "Downloading {name}: {done}/{total} MB — keep the tool open, options unlock when done."
 }
