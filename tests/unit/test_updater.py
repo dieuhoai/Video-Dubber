@@ -1,5 +1,6 @@
 """Tự cập nhật: kiểm tra bản mới, tải, cài đè đúng chỗ, script thay app chạy được trên đúng hệ điều hành."""
 import json
+import os
 import subprocess
 import sys
 import time
@@ -111,8 +112,8 @@ def test_windows_flow_prepares_helper(tmp_path, monkeypatch):
     monkeypatch.setattr(updater, "install_target", lambda kind=None: target)
     rel = updater.latest_release(force=True, kind="windows")
     updater.perform(rel, ["--port", "1"], lambda *a: None, kind="windows", restart=False)
-    script = (D.USER_DIR / "updates" / "update.cmd").read_text(encoding="utf-8")
-    assert "robocopy" in script and str(target) in script and "VideoDubber.exe" in script
+    script = (D.USER_DIR / "updates" / "update.cmd").read_text(encoding="ascii")
+    assert "robocopy" in script and "%VD_TARGET%" in script
     assert (D.USER_DIR / "updates" / "v99.0.0" / "VideoDubber.exe").read_text() == "new"
 
 
@@ -140,7 +141,7 @@ def _wait(marker: Path, secs: float = 60) -> bool:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="script .cmd chỉ chạy trên Windows")
 def test_windows_script_really_replaces_and_relaunches(tmp_path):
-    target, stage = tmp_path / "Công cụ Video %x", tmp_path / "stage"
+    target, stage = tmp_path / "Công cụ (x86) %x", tmp_path / "stage"
     (target / "_internal").mkdir(parents=True)
     (target / "VideoDubber.exe").write_text("old")
     (target / "_internal" / "old.dll").write_text("old")
@@ -150,8 +151,9 @@ def test_windows_script_really_replaces_and_relaunches(tmp_path):
     marker = tmp_path / "relaunched.txt"
     launch = [sys.executable, "-c", f"open(r'{marker}', 'w').write('ok')"]
     script = tmp_path / "update.cmd"
-    script.write_text(updater.windows_script(_dead_pid(), stage, target, launch, tmp_path / "u.log"), encoding="utf-8")
-    subprocess.run(["cmd.exe", "/c", str(script)], timeout=120, check=False)
+    script.write_text(updater.windows_script(_dead_pid()), encoding="ascii")
+    env = {**os.environ, **updater.windows_env(stage, target, launch, tmp_path / "u.log")}
+    subprocess.run(["cmd.exe", "/c", str(script)], timeout=120, check=False, env=env)
     assert (target / "VideoDubber.exe").read_text() == "new"
     assert (target / "_internal" / "new.dll").exists()
     assert _wait(marker), (tmp_path / "u.log").read_text(errors="replace")

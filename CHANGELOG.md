@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-28
+### Sửa
+- Tự cập nhật trên Windows: luôn chép đè đủ file mới (trước đây robocopy có thể bỏ qua file trùng kích thước + thời gian); đường dẫn có dấu tiếng Việt, ngoặc hoặc dấu % không còn làm hỏng bước thay file.
+
 ## [0.1.6] - 2026-10-28
 ### Thêm
 - Tự cập nhật ngay trong tool: khi có bản mới trên GitHub, đầu trang hiện "Có bản mới — Cập nhật ngay". Bấm một lần, tool tự tải, cài đè (app Windows, app Mac hoặc chạy từ mã nguồn) rồi tự mở lại đúng trang đang dùng; video và phần đang làm dở giữ nguyên. Không cập nhật khi đang xuất video. Máy chủ dùng chung có thể tắt bằng `VIDEODUBBER_NO_UPDATE=1`.

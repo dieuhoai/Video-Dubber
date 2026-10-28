@@ -1,3 +1,3 @@
 """Video Dubber — lõi xử lý, không phụ thuộc web/CLI."""
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 APP_NAME = "Video Dubber"

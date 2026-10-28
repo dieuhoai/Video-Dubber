@@ -282,17 +282,18 @@ def relaunch_args(argv: list[str], port: int, token: str) -> list[str]:
     return [*out, "--port", str(port), "--token", token, "--no-browser"]
 
 
-def _cmd_quote(s: str) -> str:
-    return '"' + s.replace("%", "%%").replace('"', '""') + '"'
+def _cmd_arg(s: str) -> str:
+    return '"' + s.replace('"', '""') + '"'
 
 
-def windows_script(pid: int, stage_dir: Path, target: Path, launch: list[str], logf: Path) -> str:
-    """Đợi tool tắt → chép đè thư mục app → mở lại. Lỗi chép thì vẫn mở lại bản cũ."""
-    lg = _cmd_quote(str(logf))
-    run = "start \"\" " + " ".join(_cmd_quote(a) for a in launch)
+def windows_script(pid: int) -> str:
+    """Đợi tool tắt → chép đè thư mục app → mở lại. Lỗi chép thì vẫn mở lại bản cũ.
+
+    Script chỉ chứa chữ ASCII; mọi đường dẫn (có thể có dấu tiếng Việt, %, ngoặc) truyền qua biến môi trường VD_* —
+    cmd.exe đọc file .bat theo bảng mã console nên đường dẫn Unicode viết thẳng vào script dễ bị đọc sai.
+    """
     return "\r\n".join([
         "@echo off",
-        "chcp 65001 >nul",
         "set N=0",
         ":wait",
         f'tasklist /FI "PID eq {pid}" /NH 2>nul | findstr /R /C:" {pid} " >nul',
@@ -302,12 +303,22 @@ def windows_script(pid: int, stage_dir: Path, target: Path, launch: list[str], l
         "ping -n 2 127.0.0.1 >nul",
         "goto wait",
         ":copy",
-        f"robocopy {_cmd_quote(str(stage_dir))} {_cmd_quote(str(target))} /E /R:10 /W:1 /NFL /NDL /NP >> {lg} 2>&1",
-        f"if %ERRORLEVEL% GEQ 8 (echo COPY FAILED >> {lg}) else (echo UPDATED >> {lg})",
-        f"{run}",
-        f"rmdir /s /q {_cmd_quote(str(stage_dir))} >nul 2>&1",
+        'robocopy "%VD_STAGE%" "%VD_TARGET%" /E /IS /IT /R:10 /W:1 /NFL /NDL /NP >> "%VD_LOG%" 2>&1',
+        "if errorlevel 8 goto fail",
+        'echo UPDATED >> "%VD_LOG%"',
+        'rmdir /s /q "%VD_STAGE%" >nul 2>&1',
+        "goto run",
+        ":fail",
+        'echo COPY FAILED >> "%VD_LOG%"',
+        ":run",
+        'start "" "%VD_EXE%" %VD_ARGS%',
         "",
     ])
+
+
+def windows_env(stage_dir: Path, target: Path, launch: list[str], logf: Path) -> dict[str, str]:
+    return {"VD_STAGE": str(stage_dir), "VD_TARGET": str(target), "VD_LOG": str(logf), "VD_EXE": launch[0],
+            "VD_ARGS": " ".join(_cmd_arg(a) for a in launch[1:])}
 
 
 def _sh_quote(s: str) -> str:
@@ -334,8 +345,9 @@ def posix_script(pid: int, new_bundle: Path, target: Path, launch: list[str], lo
     ])
 
 
-def spawn_detached(cmd: list[str]) -> None:
-    kw: dict = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL,
+def spawn_detached(cmd: list[str], env: dict[str, str] | None = None) -> None:
+    kw: dict = {"env": {**os.environ, **(env or {})}, "stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
                 "close_fds": True}
     if sys.platform == "win32":
         kw["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
@@ -392,16 +404,17 @@ def perform(rel: Release, args: list[str], on_stage: Callable[[str, int, int], N
     pid = os.getpid()
     if kind == "windows":
         script = updates_dir() / "update.cmd"
-        script.write_text(windows_script(pid, staged, target, [str(target / f"{APP}.exe"), *args], logf),
-                          encoding="utf-8")
+        script.write_text(windows_script(pid), encoding="ascii")
+        env = windows_env(staged, target, [str(target / f"{APP}.exe"), *args], logf)
         helper = ["cmd.exe", "/c", str(script)]
     else:
         script = updates_dir() / "update.sh"
         launch = ["open", "-n", str(target), "--args", *args]
         script.write_text(posix_script(pid, staged / f"{APP}.app", target, launch, logf), encoding="utf-8")
         helper = ["/bin/sh", str(script)]
+        env = {}
     on_stage("restart", 0, 0)
     if restart:
-        spawn_detached(helper)
+        spawn_detached(helper, env)
         time.sleep(1.0)
         os._exit(0)
