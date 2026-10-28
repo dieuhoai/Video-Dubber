@@ -51,14 +51,24 @@ def list_all() -> dict:
 
 
 @router.post("")
-def upload(video: UploadFile = File(...), name: str = Form("")) -> dict:  # noqa: B008 — cú pháp FastAPI
+def upload(video: UploadFile = File(...), name: str = Form(""),  # noqa: B008 — cú pháp FastAPI
+           copy_from: str = Form("")) -> dict:
+    """Tải video mới. copy_from = id video đang mở → video mới nhận lại chữ, kiểu chữ, vùng che, âm thanh."""
+    if copy_from:
+        _load(copy_from)
     with tempfile.TemporaryDirectory(prefix="vdub_up_") as tmp:
         src = _save_upload(video, store.VIDEO_EXT, Path(tmp))
         try:
             tpl = store.create_template(src, name.strip() or Path(video.filename or "Video").stem)
         except (ValueError, MediaError) as e:
             raise HTTPException(422, str(e)) from e
-    return tpl.model_dump(mode="json")
+    warnings: list[str] = []
+    if copy_from:
+        try:
+            tpl, warnings = store.copy_settings(copy_from, tpl.id)
+        except (ValueError, FileNotFoundError) as e:
+            raise HTTPException(422, f"Đã tải video nhưng chưa chép được chữ: {e}") from e
+    return {**tpl.model_dump(mode="json"), "warnings": warnings}
 
 
 @router.get("/{tid}")

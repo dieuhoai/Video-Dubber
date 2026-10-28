@@ -3,7 +3,17 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.1.4] - 2026-10-28
 ### Thêm
+- Tải nhiều video một lần ở bước 1: các video dùng chung chữ, kiểu chữ, ngôn ngữ, hook và bản dịch; bấm "Tạo video" một lần là xuất hết (mỗi video × ngôn ngữ × hook) vào chung 1 file ZIP, tên file có thêm tên video.
+- Vị trí chữ và vùng che chỉnh riêng từng video, hoặc tick "Dùng cùng vị trí cho tất cả video".
+- Kéo thả trên khung xem trước: khung xanh = chữ mới, khung đỏ = vùng che chữ cũ; kéo góc để đổi cỡ, phím mũi tên để chỉnh tinh.
+- Không còn mất chữ đã nhập: tải video khác, đổi video, mở video cũ, tải lại trang hay mở lại tool đều giữ nguyên (tự lưu nháp). Chỉ nút Reset (có hỏi lại) mới xoá hết.
+- Video mới khác độ phân giải tự co giãn vị trí/cỡ chữ và vùng che; câu dài hơn video được cắt và báo.
+### Sửa
+- Vùng che có kích thước số lẻ làm hỏng "Xem thử" và xuất video.
+- Khung xem trước bị viền xám trên màn hình thấp làm vùng che lệch vị trí; ô "Tên gọi" bị đè chữ trên điện thoại.
 - Xoá caption cũ kiểu mới "Chỉ xoá chữ, giữ nền glow": chỉ thay nét chữ cũ, nền glow và phần video xung quanh giữ nguyên — không còn dải mờ lớn che video. Kiểu cũ "Làm mờ cả khung" vẫn chọn được.
 - Chế độ âm thanh "Tách nhạc + voice tải lên": tải file voice của bạn (MP3/WAV/M4A), tool bỏ giọng gốc, giữ nhạc nền đã tách, đặt voice từ giây bạn chọn; voice dài hơn video thì báo đỏ.
 ### Sửa

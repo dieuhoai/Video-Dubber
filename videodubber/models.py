@@ -120,9 +120,23 @@ class LangVariant(BaseModel):
 
 class BatchRequest(BaseModel):
     template_id: str = Field(pattern=r"^[a-z0-9]{6,32}$")
+    # Nhiều video dùng chung chữ: xuất tất cả trong 1 batch. Rỗng = chỉ template_id.
+    template_ids: list[str] = Field(default_factory=list, max_length=50)
     variants: list[LangVariant] = Field(min_length=1)
     version: int = Field(1, ge=1, le=999)
     ratio: Literal["9x16"] = "9x16"
+
+
+    @field_validator("template_ids")
+    @classmethod
+    def _ids(cls, v: list[str]) -> list[str]:
+        if any(not re.match(r"^[a-z0-9]{6,32}$", x) for x in v):
+            raise ValueError("mã video không hợp lệ")
+        return list(dict.fromkeys(v))
+
+    @property
+    def all_template_ids(self) -> list[str]:
+        return self.template_ids or [self.template_id]
 
 
 class QACheck(BaseModel):

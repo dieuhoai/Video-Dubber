@@ -41,9 +41,14 @@ def _worker(req: BatchRequest, batch: tuple[str, object]) -> None:
 def start(body: dict) -> dict:
     try:
         req = BatchRequest.model_validate(body)
-        tpl = store.load_template(req.template_id)
-        for v in req.variants:
-            validate_variant(tpl, v)
+        tpls = [store.load_template(tid) for tid in req.all_template_ids]
+        tpl = tpls[0]
+        for t in tpls:
+            for v in req.variants:
+                try:
+                    validate_variant(t, v)
+                except ValueError as e:
+                    raise ValueError(f"Video “{t.name}”: {e}" if len(tpls) > 1 else str(e)) from e
     except ValidationError as e:
         raise HTTPException(422, "; ".join(str(x["msg"]).removeprefix("Value error, ")
                                            for x in e.errors(include_url=False))) from e
@@ -55,7 +60,8 @@ def start(body: dict) -> dict:
         raise HTTPException(409, "Máy chủ đang render một batch khác — đợi xong rồi bấm lại")
     batch = store.new_batch(tpl)
     STATE.stop_flag.clear()
-    STATE.update_job(status="running", batch_id=batch[0], template_id=tpl.id, done=0, total=len(req.variants),
+    STATE.update_job(status="running", batch_id=batch[0], template_id=tpl.id, done=0,
+                     total=len(req.variants) * len(tpls),
                      items=[], ok=0, failed=[], error=None, stage="Bắt đầu…")
     threading.Thread(target=_worker, args=(req, batch), daemon=True).start()
     return {"started": True, "batch_id": batch[0]}

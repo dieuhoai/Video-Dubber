@@ -118,3 +118,43 @@ def test_upload_edit_preview_and_run(client, video_bytes, tmp_path):
     z = client.get(f"/api/batches/{bid}/zip")
     assert z.status_code == 200 and z.content[:2] == b"PK"
     assert any(b["id"] == bid for b in client.get("/api/batches").json()["items"])
+
+
+@needs_ffmpeg
+def test_upload_copies_text_and_runs_group(client, video_bytes):
+    first = client.post("/api/templates", files={"video": ("A.mp4", video_bytes, "video/mp4")}).json()
+    first["captions"] = [{"start": 0, "end": 2, "text": "Bonjour"}]
+    first["style"]["center_y"] = 200
+    client.put(f"/api/templates/{first['id']}", json=first)
+    r = client.post("/api/templates", files={"video": ("B có dấu.mp4", video_bytes, "video/mp4")},
+                    data={"copy_from": first["id"]})
+    assert r.status_code == 200, r.text
+    second = r.json()
+    assert second["captions"][0]["text"] == "Bonjour" and second["style"]["center_y"] == 200
+    assert second["warnings"] == []
+    bad = client.post("/api/templates", files={"video": ("C.mp4", video_bytes, "video/mp4")},
+                      data={"copy_from": "khongtontai"})
+    assert bad.status_code == 404
+
+    body = {"template_id": first["id"], "template_ids": [first["id"], second["id"]],
+            "variants": [{"lang": "es", "captions": ["Hola"], "hook": "h1"}]}
+    assert client.post("/api/jobs", json={**body, "template_ids": [first["id"], "zzzzzz9999"]}).status_code == 404
+    r = client.post("/api/jobs", json=body)
+    assert r.status_code == 200, r.text
+    for _ in range(600):
+        job = client.get("/api/jobs").json()
+        if job["status"] != "running":
+            break
+        time.sleep(0.1)
+    assert job["status"] == "done" and job["ok"] == 2 and job["total"] == 2, job
+
+
+def test_draft_api(client):
+    did = "d1a2b3c4d5e6"
+    assert client.get(f"/api/drafts/{did}").json() == {}
+    assert client.put(f"/api/drafts/{did}", json={"picked": ["es"]}).status_code == 200
+    assert client.get(f"/api/drafts/{did}").json() == {"picked": ["es"]}
+    assert client.put(f"/api/drafts/{did}", json=[1, 2]).status_code == 422
+    assert client.put("/api/drafts/bad..id", json={}).status_code == 404
+    assert client.delete(f"/api/drafts/{did}").status_code == 200
+    assert client.get(f"/api/drafts/{did}").json() == {}

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 
 from videodubber import APP_NAME
 
-from .api import batches, jobs, meta, templates
+from .api import batches, drafts, jobs, meta, templates
 from .state import STATE
 
 STATIC = Path(__file__).parent / "static"
@@ -95,7 +95,7 @@ def create_app(token: str, allowed_hosts: Iterable[str]) -> FastAPI:
         finally:
             STATE.remove_client(loop, q)
 
-    for r in (templates.router, jobs.router, batches.router, meta.router):
+    for r in (templates.router, jobs.router, batches.router, meta.router, drafts.router):
         app.include_router(r)
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     return app

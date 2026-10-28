@@ -40,7 +40,9 @@ def _dilate(np, m, r: int):
 def _read(video: Path, box: Box, start: float, dur: float):
     import numpy as np
     p = subprocess.run([find_tool("ffmpeg"), "-v", "error", "-ss", f"{start:.3f}", "-i", str(video), "-t", f"{dur:.3f}",
-                        "-vf", f"crop={box.w}:{box.h}:{box.x}:{box.y}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                        # Đổi sang RGB trước khi cắt: khung số lẻ (kéo bằng chuột) không bị làm tròn về số chẵn.
+                        "-vf", f"format=rgb24,crop={box.w}:{box.h}:{box.x}:{box.y}",
+                        "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                        capture_output=True, timeout=600)
     if p.returncode != 0:
         raise MediaError("Không đọc được khung hình để xoá chữ cũ")

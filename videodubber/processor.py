@@ -9,6 +9,7 @@ import logging
 import re
 import shutil
 import tempfile
+import unicodedata
 from collections.abc import Callable
 from pathlib import Path
 
@@ -36,10 +37,24 @@ def _stage(cb: Stage | None, text: str) -> None:
         cb(text)
 
 
-def output_name(tpl: Template, v: LangVariant, version: int, ratio: str = "9x16") -> str:
+def output_name(tpl: Template, v: LangVariant, version: int, ratio: str = "9x16", tag: str = "") -> str:
     voice = f"{v.gender}1" if tpl.uses_voice else ("up" if tpl.audio_mode == "uploaded_voice" else "orig")
     lang = re.sub(r"[^a-z0-9]", "", v.lang.lower())
-    return f"{tpl.app}_{tpl.concept}_{lang}_{voice}_{v.hook}_{ratio}_v{version}.mp4"
+    tag = f"_{tag}" if tag else ""
+    return f"{tpl.app}_{tpl.concept}{tag}_{lang}_{voice}_{v.hook}_{ratio}_v{version}.mp4"
+
+
+def video_tags(tpls: list[Template]) -> list[str]:
+    """Tên ngắn (không dấu) của từng video để tên file trong batch nhiều video không trùng nhau."""
+    if len(tpls) < 2:
+        return [""]
+    tags: list[str] = []
+    for i, t in enumerate(tpls, 1):
+        base = unicodedata.normalize("NFKD", t.name.replace("đ", "d").replace("Đ", "D"))
+        tag = re.sub(r"[^A-Za-z0-9]+", "-", base.encode("ascii", "ignore").decode()).strip("-").lower()[:30]
+        tag = tag or f"video{i}"
+        tags.append(f"{tag}-{i}" if tag in tags else tag)
+    return tags
 
 
 def validate_variant(tpl: Template, v: LangVariant) -> None:
@@ -143,36 +158,60 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
 def run_batch(req: BatchRequest, on_progress: Progress | None = None, should_stop: Callable[[], bool] | None = None,
               tts: TTS | None = None, batch: tuple[str, Path] | None = None,
               on_stage: Stage | None = None) -> JobResult:
-    tpl = store.load_template(req.template_id)
-    tdir = store.template_dir(tpl.id)
-    for v in req.variants:  # báo lỗi nhập liệu trước khi tốn thời gian render
-        validate_variant(tpl, v)
-    names = [output_name(tpl, v, req.version, req.ratio) for v in req.variants]
+    """Xuất mọi biến thể cho mọi video trong nhóm (1 video nếu không có template_ids) vào cùng 1 batch."""
+    tpls = [store.load_template(tid) for tid in req.all_template_ids]
+    tags = video_tags(tpls)
+    plan: list[tuple[Template, str, list[str]]] = []
+    for tpl, tag in zip(tpls, tags, strict=True):
+        for v in req.variants:  # báo lỗi nhập liệu trước khi tốn thời gian render
+            try:
+                validate_variant(tpl, v)
+            except ValueError as e:
+                raise ValueError(f"Video “{tpl.name}”: {e}" if len(tpls) > 1 else str(e)) from e
+        plan.append((tpl, tag, [output_name(tpl, v, req.version, req.ratio, tag) for v in req.variants]))
+    names = [n for _, _, ns in plan for n in ns]
     if len(set(names)) != len(names):
         raise ValueError("Có 2 biến thể trùng ngôn ngữ + giọng + mã hook — đổi mã hook (h1, h2…) cho khác nhau.")
-    bid, bdir = batch or store.new_batch(tpl)
-    if tpl.audio_mode in ("separate", "uploaded_voice") and not (tdir / "stems" / "music.wav").is_file():
-        _stage(on_stage, "Tách nhạc nền khỏi giọng gốc (chỉ lần đầu, 15–90 giây)")
-    music = prepare_music(tpl, tdir)
-    clean = prepare_clean(tpl, tdir, on_stage)
-    if tpl.uses_voice:
-        _stage(on_stage, "Nạp giọng đọc AI (vài giây đến nửa phút)")
-    tts = tts or default_tts()
+    bid, bdir = batch or store.new_batch(tpls[0])
+    total = len(names)
+    done = 0
     results: list[ItemResult] = []
-    with tempfile.TemporaryDirectory(prefix="vdub_") as tmp:
-        for i, (v, name) in enumerate(zip(req.variants, names, strict=True), 1):
-            if should_stop and should_stop():
-                break
-            try:
-                r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}", on_stage, clean)
-            except Exception as e:  # noqa: BLE001 — lỗi 1 video không được làm hỏng cả batch
-                log.exception("Lỗi khi tạo %s %s", v.lang, v.hook)
-                r = ItemResult(lang=f"{v.lang} {v.hook}", ok=False, error=str(e))
-            finally:
-                shutil.rmtree(Path(tmp) / f"{i}", ignore_errors=True)
-            results.append(r)
-            if on_progress:
-                on_progress(i, len(req.variants), r)
+    stopped = False
+    for tpl, tag, tnames in plan:
+        if stopped:
+            break
+        tdir = store.template_dir(tpl.id)
+        stage = on_stage if len(tpls) < 2 else (lambda text, n=tpl.name: _cb(on_stage, f"[{n}] {text}"))
+        if tpl.audio_mode in ("separate", "uploaded_voice") and not (tdir / "stems" / "music.wav").is_file():
+            _stage(stage, "Tách nhạc nền khỏi giọng gốc (chỉ lần đầu, 15–90 giây)")
+        music = prepare_music(tpl, tdir)
+        clean = prepare_clean(tpl, tdir, stage)
+        if tpl.uses_voice and tts is None:
+            _stage(stage, "Nạp giọng đọc AI (vài giây đến nửa phút)")
+            tts = default_tts()
+        with tempfile.TemporaryDirectory(prefix="vdub_") as tmp:
+            for i, (v, name) in enumerate(zip(req.variants, tnames, strict=True), 1):
+                if should_stop and should_stop():
+                    stopped = True
+                    break
+                label = f"{v.lang} {v.hook}" + (f" · {tag}" if tag else "")
+                try:
+                    r = render_variant(tpl, tdir, v, bdir / name, music, tts, Path(tmp) / f"{i}", stage, clean)
+                    r.lang = label
+                except Exception as e:  # noqa: BLE001 — lỗi 1 video không được làm hỏng cả batch
+                    log.exception("Lỗi khi tạo %s", label)
+                    r = ItemResult(lang=label, ok=False, error=str(e))
+                finally:
+                    shutil.rmtree(Path(tmp) / f"{i}", ignore_errors=True)
+                results.append(r)
+                done += 1
+                if on_progress:
+                    on_progress(done, total, r)
     res = JobResult(batch_id=bid, items=results)
     store.save_result(bid, res)
     return res
+
+
+def _cb(cb: Stage | None, text: str) -> None:
+    if cb:
+        cb(text)

@@ -22,9 +22,32 @@ section { display: grid; gap: var(--space-4); }
 
 .grid-2 { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: var(--space-4); align-items: start; }
 .preview-card { position: sticky; top: var(--space-4); }
-.frame { position: relative; width: 100%; max-height: 70vh; margin: 0 auto var(--space-3); background: var(--bg); border-radius: 8px; overflow: hidden; }
+/* Rộng theo tỉ lệ video để khung luôn khít ảnh — khung kéo thả mới đúng vị trí trên video. */
+.frame { position: relative; width: min(100%, calc(70vh * var(--ar, 1))); max-height: 70vh; margin: 0 auto var(--space-3); background: var(--bg); border-radius: 8px; overflow: hidden; }
 .frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.cover-box { position: absolute; border: 2px dashed var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); pointer-events: none; }
+.frame { touch-action: none; user-select: none; }
+.drag-box { position: absolute; box-sizing: border-box; cursor: move; border-radius: 4px; }
+.drag-box:focus-visible { outline: none; box-shadow: var(--focus); }
+.cover-box .drag-tag { left: auto; right: 24px; }
+.cover-box { border: 2px dashed var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.cap-box { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.drag-box.ghost { background: transparent; opacity: .55; }
+.drag-tag { position: absolute; left: 2px; top: 2px; font-size: 11px; line-height: 1.4; padding: 0 6px; border-radius: 4px;
+  background: var(--surface); color: var(--text); white-space: nowrap; cursor: move; z-index: 2; }
+.drag-handle { position: absolute; right: 1px; bottom: 1px; width: 18px; height: 18px; border-radius: 4px;
+  background: var(--surface); border: 2px solid currentColor; cursor: nwse-resize; z-index: 2; }
+.cover-box .drag-handle { color: var(--danger); } .cap-box .drag-handle { color: var(--accent); }
+.group { margin-bottom: var(--space-3); }
+.group-row { display: flex; align-items: center; gap: var(--space-2); border-top: 1px solid var(--border); padding-left: var(--space-2); }
+.group-row.on { background: color-mix(in srgb, var(--accent) 8%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uploads { margin: var(--space-2) 0; }
+.upload-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-top: 1px solid var(--border); }
+.upload-row .progress { width: 90px; }
+.warn-inline { color: var(--warn); flex-basis: 100%; }
+.keep-note { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between;
+  padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); border: 1px solid var(--accent); border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 .field { display: grid; gap: var(--space-1); margin-bottom: var(--space-3); min-width: 0; }
 .field > span { color: var(--text-muted); font-size: 13px; }
@@ -82,9 +105,9 @@ details > summary { cursor: pointer; min-height: 40px; display: flex; align-item
 .qa .ok > span:first-child { color: var(--ok); font-weight: 700; }
 .qa .bad { color: var(--danger); }
 
-@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } .preview-card { position: static; } .frame { max-height: 55vh; } .frame img { max-height: 55vh; } }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } .preview-card { position: static; } .frame { max-height: 55vh; width: min(100%, calc(55vh * var(--ar, 1))); } .frame img { max-height: 55vh; } }
 @media (max-width: 560px) { .topbar { padding: var(--space-3) var(--space-4); } .card { padding: var(--space-4); }
-  .line-row { flex-wrap: wrap; } .line-row .grow { flex-basis: 100%; order: 3; } .input.num { width: 84px; } }
+  .line-row { flex-wrap: wrap; } .line-row .grow { flex-basis: 100%; order: 3; } .row.wrap > .field.grow { flex-basis: 100%; } .input.num { width: 84px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .upload-voice { margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: 8px; }
 .upload-voice audio { width: 100%; margin-top: var(--space-2); }

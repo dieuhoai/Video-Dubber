@@ -14,6 +14,8 @@
   <header class="topbar">
     <h1 class="brand" x-text="t('app.title')"></h1>
     <div class="topbar-actions">
+      <button class="btn btn-ghost" type="button" data-testid="reset" x-show="hasWork" @click="resetAll()"
+              :title="t('draft.resetHint')" x-text="t('draft.reset')"></button>
       <select class="select" x-model="lang" @change="setLang(lang)" :aria-label="t('settings.language')">
         <option value="vi">Tiếng Việt</option>
         <option value="en">English</option>
@@ -41,17 +43,34 @@
       <div class="card" x-show="!tpl">
         <h2 x-text="t('tpl.uploadTitle')"></h2>
         <p class="muted" x-text="t('tpl.uploadHint')"></p>
+        <div class="keep-note" x-show="keep" data-testid="keep-note">
+          <span x-text="t('group.keepNote')"></span>
+          <button class="btn btn-ghost" type="button" data-testid="start-blank" @click="resetAll()" x-text="t('draft.reset')"></button>
+        </div>
         <label class="field">
           <span x-text="t('tpl.name')"></span>
           <input class="input" data-testid="tpl-name" x-model.trim="upload.name" :placeholder="t('tpl.namePh')">
         </label>
         <label class="field">
           <span x-text="t('tpl.file')"></span>
-          <input class="input file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" data-testid="tpl-file"
-                 @change="upload.file = $event.target.files[0] || null">
+          <input class="input file" type="file" multiple accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" data-testid="tpl-file" x-ref="fileIn"
+                 @change="upload.files = [...$event.target.files]">
         </label>
-        <button class="btn btn-primary" type="button" data-testid="tpl-upload" :disabled="!upload.file || busy"
-                @click="uploadVideo()" x-text="busy ? t('common.uploading') : t('tpl.upload')"></button>
+        <p class="muted small" x-text="t('group.multiHint')"></p>
+        <button class="btn btn-primary" type="button" data-testid="tpl-upload" :disabled="!upload.files.length || busy"
+                @click="uploadVideos(upload.files)"
+                x-text="busy ? t('common.uploading') : (upload.files.length > 1 ? t('group.uploadN').replace('{n}', upload.files.length) : t('tpl.upload'))"></button>
+        <ul class="list uploads" x-show="uploads.length" aria-live="polite">
+          <template x-for="u in uploads" :key="u.name">
+            <li class="upload-row">
+              <span class="grow ellipsis" x-text="u.name"></span>
+              <progress class="progress" max="100" :value="u.pct" x-show="u.state === 'up'"></progress>
+              <span class="small" :class="{ 'ok-text': u.state === 'ok', error: u.state === 'err', muted: u.state === 'wait' }"
+                    x-text="t('group.state.' + u.state)"></span>
+              <span class="small warn-inline" x-show="u.msg" x-text="u.msg"></span>
+            </li>
+          </template>
+        </ul>
 
         <div x-show="templates.length" class="spaced">
           <h3 x-text="t('tpl.existing')"></h3>
@@ -68,10 +87,39 @@
 
       <div class="grid-2" x-show="tpl">
         <div class="card preview-card">
-          <div class="frame" :style="tpl ? `aspect-ratio:${tpl.width}/${tpl.height}` : ''">
-            <img :src="previewUrl" alt="" data-testid="frame" @load="previewBusy = false">
-            <div class="cover-box" x-show="tpl && tpl.cover && !showPreview" :style="coverStyle()"></div>
+          <div class="group" x-show="tpl && group.length > 1" data-testid="group">
+            <p class="small muted" x-text="t('group.title').replace('{n}', group.length)"></p>
+            <ul class="list">
+              <template x-for="g in group" :key="g.id">
+                <li class="group-row" :class="{ on: tpl && tpl.id === g.id }">
+                  <button type="button" class="link grow ellipsis" @click="switchTo(g.id)" :aria-current="tpl && tpl.id === g.id ? 'true' : null"
+                          :data-testid="'group-' + g.id" x-text="g.name"></button>
+                  <button class="btn btn-ghost" type="button" @click="removeFromGroup(g.id)" :aria-label="t('group.remove')">✕</button>
+                </li>
+              </template>
+            </ul>
           </div>
+          <div class="frame" x-ref="frame" :style="tpl ? `aspect-ratio:${tpl.width}/${tpl.height};--ar:${tpl.width / tpl.height}` : ''"
+               @pointermove.window="onDrag($event)" @pointerup.window="endDrag()" @pointercancel.window="endDrag()">
+            <img :src="previewUrl" alt="" data-testid="frame" @load="previewBusy = false" draggable="false">
+            <template x-if="tpl">
+              <div>
+                <div class="drag-box cover-box" x-show="tpl.cover" :class="{ ghost: showPreview && !drag }"
+                     :style="tpl.cover ? boxStyle(tpl.cover) : ''" tabindex="0" role="button" data-testid="drag-cover"
+                     :aria-label="t('drag.cover')" @pointerdown.prevent="startDrag($event, 'cover', 'move')" @keydown="nudge($event, 'cover')">
+                  <span class="drag-tag" data-testid="cover-tag" x-text="t('drag.coverTag')"></span>
+                  <span class="drag-handle" @pointerdown.prevent.stop="startDrag($event, 'cover', 'size')"></span>
+                </div>
+                <div class="drag-box cap-box" :class="{ ghost: showPreview && !drag }" :style="boxStyle(capRect())"
+                     tabindex="0" role="button" data-testid="drag-cap" :aria-label="t('drag.cap')"
+                     @pointerdown.prevent="startDrag($event, 'cap', 'move')" @keydown="nudge($event, 'cap')">
+                  <span class="drag-tag" x-text="t('drag.capTag')"></span>
+                  <span class="drag-handle" @pointerdown.prevent.stop="startDrag($event, 'cap', 'size')"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+          <p class="muted small" x-text="t('drag.hint')"></p>
           <label class="field">
             <span x-text="`${t('tpl.time')}: ${frameT.toFixed(1)}s`"></span>
             <input type="range" min="0" :max="tpl ? tpl.duration : 1" step="0.1" x-model.number="frameT"
@@ -84,6 +132,22 @@
                     x-text="t('tpl.showOriginal')"></button>
           </div>
           <p class="muted small" x-text="t('tpl.previewHint')"></p>
+          <label class="field spaced"><span x-text="t('group.add')"></span>
+            <input class="input file" type="file" multiple accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" data-testid="group-add"
+                   :disabled="busy" @change="uploadVideos($event.target.files); $event.target.value = ''"></label>
+          <ul class="list uploads" x-show="tpl && uploads.length" aria-live="polite">
+            <template x-for="u in uploads" :key="u.name">
+              <li class="upload-row">
+                <span class="grow ellipsis" x-text="u.name"></span>
+                <progress class="progress" max="100" :value="u.pct" x-show="u.state === 'up'"></progress>
+                <span class="small" :class="{ 'ok-text': u.state === 'ok', error: u.state === 'err', muted: u.state === 'wait' }"
+                      x-text="t('group.state.' + u.state)"></span>
+                <span class="small warn-inline" x-show="u.msg" x-text="u.msg"></span>
+              </li>
+            </template>
+          </ul>
+          <label class="check" x-show="group.length > 1"><input type="checkbox" x-model="samePos" data-testid="same-pos">
+            <span x-text="t('group.samePos')"></span></label>
         </div>
 
         <div class="card" x-show="tpl">
@@ -91,7 +155,7 @@
             <div>
               <div class="row between">
                 <h2 x-text="tpl.name"></h2>
-                <button class="btn btn-ghost" type="button" @click="closeTemplate()" x-text="t('tpl.change')"></button>
+                <button class="btn btn-ghost" type="button" data-testid="tpl-change" @click="closeTemplate()" x-text="t('tpl.change')"></button>
               </div>
               <div class="row wrap">
                 <label class="field grow"><span x-text="t('tpl.name')"></span>
@@ -119,6 +183,8 @@
                 <div class="row wrap">
                   <label class="field"><span x-text="t('style.size')"></span>
                     <input class="input num" type="number" min="10" max="300" x-model.number="tpl.style.size"></label>
+                  <label class="field"><span x-text="t('style.centerX')"></span>
+                    <input class="input num" type="number" min="0" x-model.number="tpl.style.center_x"></label>
                   <label class="field"><span x-text="t('style.centerY')"></span>
                     <input class="input num" type="number" min="0" x-model.number="tpl.style.center_y"></label>
                   <label class="field"><span x-text="t('style.maxWidth')"></span>
@@ -287,7 +353,7 @@
       </template>
 
       <div class="card row between wrap sticky-bar">
-        <span data-testid="variant-count" x-text="t('tr.willMake').replace('{n}', variants().length)"></span>
+        <span data-testid="variant-count" x-text="t('tr.willMake').replace('{n}', variants().length * Math.max(group.length, 1))"></span>
         <div class="row">
           <button class="btn" type="button" @click="go(2)" x-text="t('common.back')"></button>
           <button class="btn btn-primary" type="button" data-testid="run" @click="run()"

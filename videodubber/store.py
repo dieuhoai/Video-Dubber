@@ -1,6 +1,7 @@
 """Lưu template và batch trên đĩa: DATA_DIR/templates/<id>/, DATA_DIR/batches/<id>/."""
 from __future__ import annotations
 
+import json
 import re
 import secrets
 import shutil
@@ -10,7 +11,7 @@ from pathlib import Path
 from . import defaults as D
 from .io_utils import read_json, write_json
 from .media import probe
-from .models import Box, CaptionStyle, JobResult, Template
+from .models import Box, CaptionStyle, JobResult, Template, TimedLine
 
 ID = re.compile(r"^[a-z0-9]{6,32}$")
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm", ".mkv"}
@@ -60,6 +61,58 @@ def create_template(video_src: Path, name: str) -> Template:
                    audio_mode="original")
     save_template(tpl)
     return tpl
+
+
+def _scaled_lines(lines: list[TimedLine], duration: float, kind: str, warnings: list[str]) -> list[TimedLine]:
+    out = []
+    for x in lines:
+        if x.start >= duration - 0.05:
+            warnings.append(f"Bỏ {kind} “{x.text[:30]}” vì video mới chỉ dài {duration:.1f}s")
+            continue
+        if x.end > duration:
+            warnings.append(f"Đã cắt {kind} “{x.text[:30]}” cho vừa video {duration:.1f}s")
+            x = x.model_copy(update={"end": round(duration, 2)})
+        out.append(x)
+    return out
+
+
+def copy_settings(src_id: str, dst_id: str) -> tuple[Template, list[str]]:
+    """Chép chữ, lời thoại, kiểu chữ, vùng che, âm thanh từ video này sang video khác.
+
+    Vị trí/cỡ chữ và vùng che co giãn theo độ phân giải video mới. Trả về (template đã lưu, cảnh báo).
+    """
+    src, dst = load_template(src_id), load_template(dst_id)
+    warnings: list[str] = []
+    kx, ky = dst.width / src.width, dst.height / src.height
+    st = src.style
+    style = st.model_copy(update={
+        "size": max(10, min(300, round(st.size * ky))), "outline": min(20.0, round(st.outline * ky, 1)),
+        "center_x": min(round(st.center_x * kx), dst.width), "center_y": min(round(st.center_y * ky), dst.height),
+        "max_width": max(1, round(st.max_width * kx))})
+    cover = None
+    if src.cover:
+        c = src.cover
+        x, y = min(round(c.x * kx), dst.width - 1), min(round(c.y * ky), dst.height - 1)
+        cover = Box(x=x, y=y, w=max(1, min(round(c.w * kx), dst.width - x)),
+                    h=max(1, min(round(c.h * ky), dst.height - y)))
+    tdir, ddir = template_dir(src_id), template_dir(dst_id)
+    files = {}
+    for key, stem in (("music", "music"), ("voice_file", "voiceover")):
+        name = getattr(src, key)
+        if name and (tdir / name).is_file():
+            for old in ddir.glob(f"{stem}.*"):
+                old.unlink()
+            shutil.copy2(tdir / name, ddir / name)
+            files[key] = name
+        else:
+            files[key] = getattr(dst, key)
+    tpl = dst.model_copy(update={
+        "app": src.app, "concept": src.concept, "source_lang": src.source_lang, "glossary": list(src.glossary),
+        "captions": _scaled_lines(src.captions, dst.duration, "caption", warnings),
+        "voice": _scaled_lines(src.voice, dst.duration, "câu thoại", warnings),
+        "style": style, "cover": cover, "cover_mode": src.cover_mode, "audio_mode": src.audio_mode,
+        "voice_offset": src.voice_offset, **files})
+    return save_template(Template.model_validate(tpl.model_dump())), warnings
 
 
 def save_template(tpl: Template) -> Template:
@@ -139,3 +192,27 @@ def list_batches() -> list[dict]:
             meta["results"] = read_json(d / "results.json")
             out.append(meta)
     return out
+
+
+MAX_DRAFT = 2_000_000  # byte — chữ + bản dịch của 1 phiên, dư sức cho vài chục ngôn ngữ
+
+
+def _draft_path(did: str) -> Path:
+    return D.DATA_DIR / "drafts" / f"{_check_id(did)}.json"
+
+
+def save_draft(did: str, data: dict) -> None:
+    """Lưu phiên làm việc (nhóm video, ngôn ngữ, bản dịch…) để tải lại trang hay mở lại tool không bị mất."""
+    path = _draft_path(did)
+    size = len(json.dumps(data, ensure_ascii=False).encode("utf-8"))
+    if size > MAX_DRAFT:
+        raise ValueError(f"Bản nháp quá lớn ({size // 1024} KB) — bớt ngôn ngữ/hook rồi thử lại")
+    write_json(path, data)
+
+
+def load_draft(did: str) -> dict | None:
+    return read_json(_draft_path(did))
+
+
+def delete_draft(did: str) -> None:
+    _draft_path(did).unlink(missing_ok=True)

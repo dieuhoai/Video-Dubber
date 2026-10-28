@@ -80,3 +80,16 @@ def test_text_mode_falls_back_on_static_background(tmp_path):
            "drawbox=x=60:y=430:w=240:h=80:color=white:t=fill", "-c:v", "libx264", "-preset", "ultrafast", str(src))
     assert clean_clip(src, Box(x=0, y=400, w=360, h=140), [TimedLine(start=0, end=1, text="x")], 30,
                       tmp_path / "c") is None
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="cần ffmpeg")
+def test_read_odd_sized_box(tmp_path):
+    """Kéo vùng che ra kích thước/vị trí số lẻ (vd rộng 295) không được làm hỏng bước xoá chữ."""
+    from videodubber.clean import _read
+    from videodubber.media import ffmpeg
+    from videodubber.models import Box
+    v = tmp_path / "v.mp4"
+    ffmpeg("-f", "lavfi", "-i", "testsrc2=s=360x640:r=30:d=1", "-c:v", "libx264", "-preset", "ultrafast",
+           "-pix_fmt", "yuv420p", str(v))
+    frames = _read(v, Box(x=33, y=101, w=295, h=83), 0, 0.5)
+    assert frames.shape[1:] == (83, 295, 3) and frames.shape[0] >= 10
