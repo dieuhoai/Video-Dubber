@@ -46,6 +46,9 @@ def capabilities() -> dict:
 
 def _download() -> None:
     try:
+        if modelstore.missing_libs():
+            _dl.update(name="thư viện Python (vài phút)", done=0, total=0)
+            modelstore.install_libs()
         modelstore.download_all(lambda name, done, total: _dl.update(name=name, done=done, total=total))
         _dl.update(error=None)
     except Exception as e:  # noqa: BLE001 — mất mạng, hết dung lượng… báo lên giao diện
@@ -58,7 +61,7 @@ def _download() -> None:
 
 @router.post("/models/download")
 def download_models() -> dict:
-    if not modelstore.missing():
+    if not modelstore.missing() and not modelstore.missing_libs():
         return {"started": False, "missing": []}
     if not _dl_lock.acquire(blocking=False):
         return {"started": False, "running": True}

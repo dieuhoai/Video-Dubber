@@ -35,3 +35,38 @@ def test_missing_lists_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(modelstore, "FILES", {"a.onnx": "x", "b.bin": "y"})
     assert modelstore.missing() == ["a.onnx", "b.bin"]
     _ = Path
+
+
+def test_install_libs_uses_pip_and_bootstraps_it(monkeypatch):
+    """Thiếu thư viện khi chạy từ mã nguồn → tool tự cài bằng Python đang chạy (tự bật pip nếu chưa có)."""
+    calls = []
+    state = {"pip": False, "libs": ["onnxruntime", "soundfile"]}
+
+    def fake_run(args, **kw):
+        calls.append(args[2:])
+
+        class R:
+            returncode = 0
+            stderr = ""
+        if args[2:4] == ["-m", "pip"] and args[4] == "--version":
+            R.returncode = 0 if state["pip"] else 1
+        if args[2:4] == ["-m", "ensurepip"]:
+            state["pip"] = True
+        if args[2:5] == ["-m", "pip", "install"]:
+            state["libs"] = []
+        return R()
+
+    monkeypatch.setattr(modelstore.subprocess, "run", lambda a, **k: fake_run(["py", "x", *a[1:]], **k))
+    monkeypatch.setattr(modelstore, "missing_libs", lambda: list(state["libs"]))
+    monkeypatch.setattr(modelstore.sys, "frozen", False, raising=False)
+    modelstore.install_libs()
+    assert ["-m", "ensurepip", "--upgrade"] in calls
+    assert any(c[:3] == ["-m", "pip", "install"] and "onnxruntime" in c for c in calls)
+
+
+def test_install_libs_skips_in_packaged_app(monkeypatch):
+    monkeypatch.setattr(modelstore.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(modelstore, "missing_libs", lambda: ["numpy"])
+    import pytest
+    with pytest.raises(RuntimeError, match="tải lại"):
+        modelstore.install_libs()

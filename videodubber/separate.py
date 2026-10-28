@@ -59,9 +59,8 @@ def separate_instrumental(model: Path, wav_in: Path, wav_out: Path, p: MdxParams
         import onnxruntime as ort
         import soundfile as sf
     except ImportError as e:
-        raise MediaError("Môi trường chạy tool thiếu thư viện tách nhạc (onnxruntime, soundfile, numpy). "
-                         "Đang chạy từ mã nguồn: mở Terminal trong thư mục tool, chạy “python scripts/setup_env.py” "
-                         "rồi mở lại tool — hoặc dùng bản app tải từ trang Releases.") from e
+        raise MediaError("Máy đang thiếu thư viện tách nhạc — quay lại bước 1, bấm “Cài & tải đủ để tách nhạc” "
+                         "rồi chạy lại.") from e
     if not model.is_file():
         raise MediaError(f"Không thấy mô hình tách nhạc {model.name} — chạy scripts/get_models.py để tải.")
     p = p or MdxParams()

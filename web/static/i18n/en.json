@@ -140,7 +140,7 @@
   "draft.restored": "Restored your unfinished work",
   "draft.saveFail": "Couldn't save the draft:",
   "models.need": "The “Separate music…” modes need the AI separation + offline voice models (~420 MB, one-time download, needs Internet). This copy doesn't have them yet.",
-  "models.download": "Download AI models",
+  "models.download": "Install & download everything (one time)",
   "models.progress": "Downloading {name}: {done}/{total} MB — keep the tool open, options unlock when done.",
-  "models.libs": "The Python environment running this tool is missing: {libs}. If running from source: open a terminal in the tool folder, run “python scripts/setup_env.py”, then restart. Or use the app from the GitHub Releases page (everything included)."
+  "models.libs": "This machine is missing libraries for music separation/voice: {libs}. Click the button below — the tool installs them itself (needs Internet, a few minutes)."
 }

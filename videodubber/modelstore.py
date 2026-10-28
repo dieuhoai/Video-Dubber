@@ -7,6 +7,8 @@ trước đây người dùng không biết cách mở khoá, nay có nút tải
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
@@ -77,3 +79,28 @@ def missing_libs() -> list[str]:
     """
     import importlib.util
     return [pkg for mod, pkg in REQUIRED_LIBS.items() if importlib.util.find_spec(mod) is None]
+
+
+def install_libs() -> None:
+    """Cài thư viện còn thiếu vào chính môi trường Python đang chạy tool (chỉ khi chạy từ mã nguồn).
+
+    Môi trường tạo bằng uv không có sẵn pip → bật pip bằng ensurepip trước.
+    """
+    libs = missing_libs()
+    if not libs:
+        return
+    if getattr(sys, "frozen", False):
+        raise RuntimeError("Bản app này bị thiếu thư viện — hãy tải lại bản mới nhất ở trang Releases.")
+    py = sys.executable
+
+    def pip(*a: str, timeout: float = 1800) -> subprocess.CompletedProcess:
+        return subprocess.run([py, "-m", *a], capture_output=True, text=True, timeout=timeout)
+
+    if pip("pip", "--version", timeout=60).returncode != 0:
+        pip("ensurepip", "--upgrade", timeout=300)
+    r = pip("pip", "install", "--disable-pip-version-check", *libs)
+    if r.returncode != 0:
+        tail = "\n".join((r.stderr or "").strip().splitlines()[-4:])
+        raise RuntimeError(f"Cài thư viện lỗi ({', '.join(libs)}): {tail}")
+    import importlib
+    importlib.invalidate_caches()

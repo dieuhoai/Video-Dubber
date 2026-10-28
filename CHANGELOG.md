@@ -4,7 +4,7 @@
 
 ## [Unreleased]
 ### Sửa
-- Môi trường chạy thiếu thư viện tách nhạc (chạy từ mã nguồn bằng môi trường cũ): khoá sẵn 2 chế độ tách nhạc và ghi rõ cách sửa ở bước 1, thay vì để chạy tới bước cuối mới báo lỗi.
+- Lỗi "Thiếu thư viện tách nhạc" khi chạy từ mã nguồn bằng môi trường cũ: tool phát hiện ngay ở bước 1; nút "Cài & tải đủ để tách nhạc" tự cài thư viện còn thiếu (kể cả khi môi trường không có pip) rồi tải mô hình — không cần gõ lệnh, không cần mở lại tool.
 - Hai chế độ "Tách nhạc, đọc voice mới" và "Tách nhạc + voice tải lên" bị khoá khi bản đang chạy thiếu mô hình AI (chạy từ mã nguồn, hoặc bản tự đóng gói không kèm mô hình). Nay có nút "Tải mô hình AI" ngay ở bước 1: tải ~420 MB một lần, có thanh tiến độ, xong tự mở khoá.
 
 ## [0.1.4] - 2026-10-28

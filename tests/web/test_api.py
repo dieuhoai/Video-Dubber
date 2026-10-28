@@ -187,3 +187,19 @@ def test_missing_libs_lock_separation_with_clear_reason(client, monkeypatch):
     monkeypatch.setattr(modelstore, "missing_libs", lambda: ["onnxruntime"])
     caps = client.get("/api/capabilities").json()
     assert caps["separate"] is False and caps["missing_libs"] == ["onnxruntime"]
+
+
+def test_download_button_installs_missing_libs(client, monkeypatch):
+    from videodubber import modelstore
+    state = {"libs": ["onnxruntime"]}
+    monkeypatch.setattr(modelstore, "missing_libs", lambda: list(state["libs"]))
+    monkeypatch.setattr(modelstore, "missing", lambda: [])
+    monkeypatch.setattr(modelstore, "install_libs", lambda: state.update(libs=[]))
+    monkeypatch.setattr(modelstore, "download_all", lambda cb=None: None)
+    assert client.post("/api/models/download").json()["started"] is True
+    for _ in range(100):
+        caps = client.get("/api/capabilities").json()
+        if not caps["download"]["running"]:
+            break
+        time.sleep(0.05)
+    assert caps["missing_libs"] == [] and caps["download"]["error"] is None
