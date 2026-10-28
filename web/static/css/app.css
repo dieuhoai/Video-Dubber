@@ -113,3 +113,8 @@ details > summary { cursor: pointer; min-height: 40px; display: flex; align-item
 .upload-voice audio { width: 100%; margin-top: var(--space-2); }
 .ok-text { color: var(--ok); }
 .model-box { margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--warn); border-radius: 8px; display: grid; gap: var(--space-2); justify-items: start; }
+
+.brand .ver { font-size: 0.6em; font-weight: 400; opacity: 0.6; margin-left: var(--space-2); }
+.update-bar { margin: var(--space-4) max(var(--space-4), calc((100% - 1180px) / 2 + var(--space-4))) 0; padding: var(--space-3); border: 1px solid var(--ok); border-radius: 8px; display: grid; gap: var(--space-2); }
+.update-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.update-note { margin: 0; font-size: 0.9em; }

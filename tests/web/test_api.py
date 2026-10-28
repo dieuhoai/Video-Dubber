@@ -203,3 +203,20 @@ def test_download_button_installs_missing_libs(client, monkeypatch):
             break
         time.sleep(0.05)
     assert caps["missing_libs"] == [] and caps["download"]["error"] is None
+
+
+def test_version_and_update_refused_while_rendering(client, monkeypatch):
+    from videodubber import __version__
+    from web.state import STATE
+    assert client.get("/api/version").json() == {"version": __version__}
+    monkeypatch.setitem(STATE.job, "status", "running")
+    r = client.post("/api/update")
+    assert r.status_code == 409 and "Đang xuất video" in r.json()["detail"]
+
+
+def test_update_check_offline_is_quiet(client, monkeypatch):
+    from videodubber import updater
+    monkeypatch.setenv("VIDEODUBBER_UPDATE_URL", "file:///khong/co.json")
+    monkeypatch.setattr(updater, "_cache", {"at": 0.0, "rel": None})
+    r = client.get("/api/update?force=true").json()
+    assert r["available"] is False and r["progress"]["running"] is False

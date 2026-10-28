@@ -10,6 +10,7 @@ class AppState:
     def __init__(self) -> None:
         self.token = ""
         self.port = 0
+        self.argv: list[str] = []  # tham số lúc chạy — giữ nguyên khi tự khởi động lại sau cập nhật
         self._lock = threading.Lock()
         self._clients: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self.job: dict[str, Any] = {"status": "idle", "done": 0, "total": 0, "items": []}

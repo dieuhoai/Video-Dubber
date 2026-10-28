@@ -19,3 +19,9 @@ def isolated_user_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(D, "SETTINGS_FILE", tmp_path / "_user" / "settings.json")
 
 
+
+
+@pytest.fixture(autouse=True)
+def no_real_update_check(monkeypatch):
+    """Test không gọi GitHub thật để kiểm tra bản mới."""
+    monkeypatch.setenv("VIDEODUBBER_UPDATE_URL", "file:///khong-co-ban-moi.json")

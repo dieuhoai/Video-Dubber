@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 
 from videodubber import APP_NAME
 
-from .api import batches, drafts, jobs, meta, templates
+from .api import batches, drafts, jobs, meta, templates, update
 from .state import STATE
 
 STATIC = Path(__file__).parent / "static"
@@ -95,7 +95,7 @@ def create_app(token: str, allowed_hosts: Iterable[str]) -> FastAPI:
         finally:
             STATE.remove_client(loop, q)
 
-    for r in (templates.router, jobs.router, batches.router, meta.router, drafts.router):
+    for r in (templates.router, jobs.router, batches.router, meta.router, drafts.router, update.router):
         app.include_router(r)
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
     return app
@@ -120,6 +120,8 @@ def _setup_log() -> None:
 def free_port(preferred: int = 8765) -> int:
     for p in [preferred, *range(preferred + 1, preferred + 50), 0]:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if sys.platform != "win32":  # vừa tự khởi động lại: cổng cũ còn TIME_WAIT nhưng vẫn dùng lại được
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("127.0.0.1", p))
                 return s.getsockname()[1]
@@ -153,6 +155,7 @@ def main(argv: list[str] | None = None) -> None:
     port = a.port if shared else free_port(a.port)
     token = a.token or secrets.token_urlsafe(24)
     STATE.port = port
+    STATE.argv = argv
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     for h in a.allow_host:
         hosts |= {h, f"{h}:{port}"}

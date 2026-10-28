@@ -142,5 +142,15 @@
   "models.need": "Hai chế độ “Tách nhạc…” cần mô hình AI tách nhạc + giọng đọc offline (khoảng 420 MB, tải 1 lần, cần Internet). Bản đang chạy chưa có mô hình này.",
   "models.download": "Cài & tải đủ để tách nhạc (1 lần)",
   "models.progress": "Đang tải {name}: {done}/{total} MB — để tool mở, xong sẽ tự mở khoá.",
-  "models.libs": "Máy đang thiếu thư viện để tách nhạc/đọc giọng: {libs}. Bấm nút bên dưới — tool tự cài (cần Internet, vài phút), không cần gõ lệnh."
+  "models.libs": "Máy đang thiếu thư viện để tách nhạc/đọc giọng: {libs}. Bấm nút bên dưới — tool tự cài (cần Internet, vài phút), không cần gõ lệnh.",
+  "update.available": "Có bản mới v{v}.",
+  "update.now": "Cập nhật ngay",
+  "update.later": "Để sau",
+  "update.note": "Tool tự tải bản mới, cài đè rồi tự mở lại (khoảng 1–3 phút). Video và phần đang làm dở vẫn giữ nguyên.",
+  "update.download": "Đang tải bản mới: {done}/{total} MB…",
+  "update.install": "Đang cài bản mới…",
+  "update.libs": "Đang cài thư viện mới (vài phút)…",
+  "update.restart": "Đang khởi động lại tool — trang sẽ tự tải lại, đừng đóng cửa sổ này.",
+  "update.done": "Đã cập nhật lên v{v}.",
+  "update.timeout": "Tool chưa mở lại được. Hãy tự mở lại tool; nếu vẫn lỗi, tải bản mới ở trang Releases."
 }

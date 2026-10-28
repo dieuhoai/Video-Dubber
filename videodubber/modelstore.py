@@ -91,6 +91,11 @@ def install_libs() -> None:
         return
     if getattr(sys, "frozen", False):
         raise RuntimeError("Bản app này bị thiếu thư viện — hãy tải lại bản mới nhất ở trang Releases.")
+    pip_install(libs)
+
+
+def pip_install(pkgs: list[str]) -> None:
+    """pip install vào chính môi trường đang chạy tool. Môi trường tạo bằng uv không có pip → bật bằng ensurepip."""
     py = sys.executable
 
     def pip(*a: str, timeout: float = 1800) -> subprocess.CompletedProcess:
@@ -98,9 +103,9 @@ def install_libs() -> None:
 
     if pip("pip", "--version", timeout=60).returncode != 0:
         pip("ensurepip", "--upgrade", timeout=300)
-    r = pip("pip", "install", "--disable-pip-version-check", *libs)
+    r = pip("pip", "install", "--disable-pip-version-check", *pkgs)
     if r.returncode != 0:
         tail = "\n".join((r.stderr or "").strip().splitlines()[-4:])
-        raise RuntimeError(f"Cài thư viện lỗi ({', '.join(libs)}): {tail}")
+        raise RuntimeError(f"Cài thư viện lỗi ({', '.join(pkgs)}): {tail}")
     import importlib
     importlib.invalidate_caches()

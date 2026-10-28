@@ -12,7 +12,8 @@
 <body>
 <div class="shell" x-data="app()" x-init="init()" x-cloak>
   <header class="topbar">
-    <h1 class="brand" x-text="t('app.title')"></h1>
+    <h1 class="brand"><span x-text="t('app.title')"></span>
+      <small class="ver" data-testid="version" x-show="upd.current" x-text="'v' + upd.current"></small></h1>
     <div class="topbar-actions">
       <button class="btn btn-ghost" type="button" data-testid="reset" x-show="hasWork" @click="resetAll()"
               :title="t('draft.resetHint')" x-text="t('draft.reset')"></button>
@@ -24,6 +25,25 @@
               x-text="theme === 'dark' ? '☾' : '☀'"></button>
     </div>
   </header>
+
+  <div class="update-bar" role="status" data-testid="update-bar"
+       x-show="(upd.available && upd.latest && dismissedUpd !== upd.latest.tag) || updating">
+    <template x-if="!updating">
+      <div class="update-row">
+        <span x-text="t('update.available').replace('{v}', upd.latest?.version || '')"></span>
+        <button class="btn btn-primary" type="button" data-testid="update-now" x-show="!upd.blocked"
+                @click="startUpdate()" x-text="t('update.now')"></button>
+        <button class="btn btn-ghost" type="button" @click="dismissUpdate()" x-text="t('update.later')"></button>
+        <span class="muted" x-show="upd.blocked" x-text="upd.blocked"></span>
+      </div>
+    </template>
+    <template x-if="updating">
+      <div class="update-row">
+        <span data-testid="update-progress" x-text="updateText()"></span>
+      </div>
+    </template>
+    <p class="muted update-note" x-show="!updating && !upd.blocked" x-text="t('update.note')"></p>
+  </div>
 
   <nav class="steps" :aria-label="t('steps.label')">
     <template x-for="s in [1,2,3,4]" :key="s">

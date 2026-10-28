@@ -71,6 +71,8 @@ function app() {
     picked: [], gender: "f",
     tr: {}, hooksPerLang: 3, pasteReply: "", voiceVer: 0,
     job: { status: "idle", done: 0, total: 0, items: [] },
+    upd: { current: "", available: false, latest: null, blocked: null }, updating: false, updProg: {},
+    dismissedUpd: LS.get("dismissedUpdate", ""),
 
     async init() {
       document.documentElement.dataset.theme = this.theme;
@@ -84,6 +86,55 @@ function app() {
       this.$watch("draftJson", () => this.queueDraft());
       this.connect();
       if (this.caps.download?.running) this.pollModels();
+      this.checkUpdate();
+      setInterval(() => this.checkUpdate(), 6 * 3600 * 1000);
+      let done = "";
+      try { done = sessionStorage.getItem("updatedTo") || ""; sessionStorage.removeItem("updatedTo"); } catch { /* bỏ qua */ }
+      if (done) this.notice = this.t("update.done").replace("{v}", done);
+    },
+
+    // ---------- tự cập nhật ----------
+    async checkUpdate() {
+      try {
+        this.upd = await api("/api/update");
+        if (this.upd.progress?.running) { this.updating = true; this.pollUpdate(this.upd.progress.target); }
+      } catch { /* không có mạng: im lặng, lần sau kiểm lại */ }
+    },
+    dismissUpdate() { this.dismissedUpd = this.upd.latest?.tag || ""; LS.set("dismissedUpdate", this.dismissedUpd); },
+    async startUpdate() {
+      this.error = "";
+      try {
+        const r = await api("/api/update", { method: "POST" });
+        this.updating = true;
+        this.updProg = { stage: "download" };
+        this.pollUpdate(r.target || this.upd.latest?.version);
+      } catch (e) { this.error = e.message; }
+    },
+    async pollUpdate(target, started = Date.now()) {
+      if (Date.now() - started > 8 * 60 * 1000) { this.updating = false; this.error = this.t("update.timeout"); return; }
+      try {
+        const v = await api("/api/version");
+        if (v.version === target) {
+          try { sessionStorage.setItem("updatedTo", target); } catch { /* bỏ qua */ }
+          location.reload();
+          return;
+        }
+        if (this.updProg.stage !== "restart") {
+          const st = await api("/api/update");
+          this.updProg = st.progress || {};
+          if (!this.updProg.running && this.updProg.error) {
+            this.updating = false; this.error = this.updProg.error; return;
+          }
+        }
+      } catch { this.updProg = { ...this.updProg, stage: "restart" }; /* tool đang tắt/mở lại */ }
+      setTimeout(() => this.pollUpdate(target, started), 1500);
+    },
+    updateText() {
+      const p = this.updProg || {};
+      const mb = (x) => (x / 1048576).toFixed(0);
+      const key = { download: "update.download", install: "update.install", libs: "update.libs",
+        restart: "update.restart" }[p.stage] || "update.install";
+      return this.t(key).replace("{done}", mb(p.done || 0)).replace("{total}", p.total ? mb(p.total) : "?");
     },
 
     t(key) { return this.dict[key] ?? key; },
