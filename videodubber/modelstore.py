@@ -65,3 +65,15 @@ def download_all(on_progress: Progress | None = None) -> None:
             tmp.replace(dest / name)
         finally:
             tmp.unlink(missing_ok=True)
+
+
+REQUIRED_LIBS = {"numpy": "numpy", "onnxruntime": "onnxruntime", "soundfile": "soundfile", "kokoro_onnx": "kokoro-onnx"}
+
+
+def missing_libs() -> list[str]:
+    """Thư viện Python cần cho tách nhạc/giọng offline mà môi trường đang chạy chưa có.
+
+    Hay gặp khi chạy từ mã nguồn bằng môi trường cũ tạo trước khi tool cần các thư viện này.
+    """
+    import importlib.util
+    return [pkg for mod, pkg in REQUIRED_LIBS.items() if importlib.util.find_spec(mod) is None]

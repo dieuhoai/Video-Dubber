@@ -180,3 +180,10 @@ def test_models_download_unlocks_separation(client, tmp_path, monkeypatch):
         time.sleep(0.05)
     assert caps["separate"] is True and caps["missing_models"] == [] and caps["download"]["error"] is None
     assert client.post("/api/models/download").json()["started"] is False
+
+
+def test_missing_libs_lock_separation_with_clear_reason(client, monkeypatch):
+    from videodubber import modelstore
+    monkeypatch.setattr(modelstore, "missing_libs", lambda: ["onnxruntime"])
+    caps = client.get("/api/capabilities").json()
+    assert caps["separate"] is False and caps["missing_libs"] == ["onnxruntime"]

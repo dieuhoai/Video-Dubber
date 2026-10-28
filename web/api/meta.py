@@ -37,8 +37,11 @@ _dl_lock = threading.Lock()
 
 @router.get("/capabilities")
 def capabilities() -> dict:
-    return {"offline_voice": KokoroTTS.available(), "separate": modelstore.find_model(SEPARATION_MODEL) is not None,
-            "translate_api": api_available(), "missing_models": modelstore.missing(), "download": dict(_dl)}
+    libs = modelstore.missing_libs()
+    return {"offline_voice": KokoroTTS.available() and not libs,
+            "separate": modelstore.find_model(SEPARATION_MODEL) is not None and not libs,
+            "translate_api": api_available(), "missing_models": modelstore.missing(), "missing_libs": libs,
+            "download": dict(_dl)}
 
 
 def _download() -> None:

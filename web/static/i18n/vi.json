@@ -141,5 +141,6 @@
   "draft.saveFail": "Chưa lưu được bản nháp:",
   "models.need": "Hai chế độ “Tách nhạc…” cần mô hình AI tách nhạc + giọng đọc offline (khoảng 420 MB, tải 1 lần, cần Internet). Bản đang chạy chưa có mô hình này.",
   "models.download": "Tải mô hình AI",
-  "models.progress": "Đang tải {name}: {done}/{total} MB — để tool mở, xong sẽ tự mở khoá."
+  "models.progress": "Đang tải {name}: {done}/{total} MB — để tool mở, xong sẽ tự mở khoá.",
+  "models.libs": "Môi trường đang chạy tool thiếu thư viện: {libs}. Nếu chạy từ mã nguồn: mở Terminal trong thư mục tool, chạy “python scripts/setup_env.py”, rồi mở lại tool. Hoặc dùng bản app tải từ trang Releases trên GitHub (đã có sẵn đủ)."
 }
