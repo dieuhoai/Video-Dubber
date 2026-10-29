@@ -87,7 +87,7 @@ def render(video: Path, ass: Path, out: Path, duration: float, cover: Box | None
     else:
         amap = []
     ffmpeg(*args, "-filter_complex", ";".join(parts), "-map", "[vout]", *amap,
-           "-t", f"{duration:.3f}", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
+           "-t", f"{duration:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out), timeout=1800)
     return out
 

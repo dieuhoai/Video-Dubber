@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Sửa
+- Xuất video nhanh hơn: mã hoá H.264 dùng preset `veryfast` (trước là `medium`), chất lượng crf 18 giữ nguyên, file nhỏ hơn; khoảng 2 lần nhanh hơn.
+- Giọng đọc được lưu đệm: cùng câu + ngôn ngữ + giọng chỉ tạo một lần, lần sau (render lại, video trùng câu) lấy ngay từ bộ nhớ đệm.
+
 ## [0.1.7] - 2026-10-28
 ### Sửa
 - Tự cập nhật trên Windows: luôn chép đè đủ file mới (trước đây robocopy có thể bỏ qua file trùng kích thước + thời gian); đường dẫn có dấu tiếng Việt, ngoặc hoặc dấu % không còn làm hỏng bước thay file.

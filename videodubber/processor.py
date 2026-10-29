@@ -5,6 +5,7 @@ báo tiến độ qua `on_progress(done, total, item)`; huỷ qua `should_stop()
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import shutil
@@ -13,6 +14,7 @@ import unicodedata
 from collections.abc import Callable
 from pathlib import Path
 
+from . import defaults as D
 from . import store
 from .audio import Fit, fit_clip, mix, separate_music, slots
 from .captions import build_ass
@@ -99,6 +101,25 @@ def prepare_clean(tpl: Template, tdir: Path, on_stage: Stage | None = None) -> t
     return res
 
 
+def _synth_cached(tts: TTS, text: str, lang, gender: str, out: Path) -> Path:
+    """Giọng đọc đã tạo cho cùng (engine, ngôn ngữ, giọng, câu) thì lấy lại từ bộ nhớ đệm — không đọc lại."""
+    key = hashlib.sha1(f"{tts.name}|{lang.code}|{gender}|{text}".encode()).hexdigest()[:24]
+    cache_dir = D.DATA_DIR / "tts_cache"
+    cached = cache_dir / f"{key}.wav"
+    if cached.is_file():
+        shutil.copyfile(cached, out)
+        return out
+    tts.synth(text, lang, gender, out)
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        tmp = cached.with_suffix(".part")
+        shutil.copyfile(out, tmp)
+        tmp.replace(cached)
+    except OSError:
+        log.warning("Không ghi được bộ nhớ đệm giọng đọc (vẫn dùng bình thường)")
+    return out
+
+
 def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: Path | None, tts: TTS,
                    work: Path, on_stage: Stage | None = None, clean: tuple[Path, float] | None = None) -> ItemResult:
     lang = get_lang(v.lang)
@@ -115,7 +136,7 @@ def render_variant(tpl: Template, tdir: Path, v: LangVariant, out: Path, music: 
         clips = []
         for i, (line, text) in enumerate(zip(tpl.voice, v.voice, strict=True)):
             _stage(on_stage, f"{v.lang} {v.hook}: tạo giọng câu {i + 1}/{len(tpl.voice)}")
-            raw = tts.synth(text.strip(), lang, v.gender, work / f"tts_{i}.wav")
+            raw = _synth_cached(tts, text.strip(), lang, v.gender, work / f"tts_{i}.wav")
             f = fit_clip(raw, work / f"fit_{i}.wav", i, sl[i])
             fits.append(f)
             clips.append((work / f"fit_{i}.wav", line.start))
